@@ -82,6 +82,54 @@ class JobDataProcessor {
   }
 
   /**
+   * Filter out jobs from excluded companies
+   * Case-insensitive partial matching (e.g., "Salesforce" matches "Salesforce Inc")
+   * @param {Array} jobs - Array of processed job objects
+   * @param {Array} excludeCompanies - Array of company names to exclude (case-insensitive)
+   * @returns {Object} Object with filtered jobs and excluded count
+   */
+  filterExcludedCompanies(jobs, excludeCompanies = []) {
+    if (!Array.isArray(jobs) || jobs.length === 0) {
+      return { filtered: [], excluded: 0 };
+    }
+
+    if (!Array.isArray(excludeCompanies) || excludeCompanies.length === 0) {
+      return { filtered: jobs, excluded: 0 };
+    }
+
+    // Normalize exclude list to lowercase for comparison
+    const excludeLower = excludeCompanies.map(name => name.toLowerCase().trim()).filter(name => name.length > 0);
+
+    if (excludeLower.length === 0) {
+      return { filtered: jobs, excluded: 0 };
+    }
+
+    const filtered = [];
+    let excluded = 0;
+
+    jobs.forEach(job => {
+      const companyNameLower = job.companyName.toLowerCase().trim();
+      
+      // Check if company name contains any excluded company name
+      const shouldExclude = excludeLower.some(excludedName => 
+        companyNameLower.includes(excludedName) || excludedName.includes(companyNameLower)
+      );
+
+      if (shouldExclude) {
+        excluded++;
+      } else {
+        filtered.push(job);
+      }
+    });
+
+    if (excluded > 0) {
+      console.log(`[Processor] Excluded ${excluded} jobs from excluded companies`);
+    }
+
+    return { filtered, excluded };
+  }
+
+  /**
    * Deduplicate jobs by company name
    * Keeps the most recent posting per company
    * @param {Array} jobs - Array of processed job objects

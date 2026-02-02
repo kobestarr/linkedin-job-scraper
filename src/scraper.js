@@ -1,6 +1,6 @@
 /**
  * Main Scraper Script
- * Orchestrates the job scraping process: Apify → Process → Google Sheets
+ * Orchestrates the job scraping process: Apify → Process → Filter → Deduplicate → Google Sheets
  */
 
 require('dotenv').config();
@@ -46,6 +46,9 @@ class LinkedInJobScraper {
     console.log(`Location: ${scrapingConfig.location}`);
     console.log(`Date Range: ${scrapingConfig.dateRange}`);
     console.log(`Max Results: ${scrapingConfig.maxResults}`);
+    if (scrapingConfig.excludeCompanies && scrapingConfig.excludeCompanies.length > 0) {
+      console.log(`Exclude Companies: ${scrapingConfig.excludeCompanies.join(', ')}`);
+    }
     console.log('');
 
     try {
@@ -59,22 +62,42 @@ class LinkedInJobScraper {
         return {
           scraped: 0,
           processed: 0,
+          filtered: 0,
           appended: 0,
           skipped: 0
         };
       }
 
-      // Step 2: Process and deduplicate jobs
-      console.log('[Step 2] Processing and deduplicating jobs...');
+      // Step 2: Process jobs
+      console.log('[Step 2] Processing jobs...');
       const processedJobs = this.processor.processJobs(
         scrapeResult.items,
         scrapingConfig.jobTitle
       );
-      const deduplicatedJobs = this.processor.deduplicateByCompany(processedJobs);
-      console.log(`✓ Processed ${deduplicatedJobs.length} unique jobs\n`);
+      console.log(`✓ Processed ${processedJobs.length} jobs\n`);
 
-      // Step 3: Push to Google Sheets
-      console.log('[Step 3] Pushing to Google Sheets...');
+      // Step 3: Filter excluded companies
+      const excludeCompanies = scrapingConfig.excludeCompanies || [];
+      let filteredJobs = processedJobs;
+      let excludedCount = 0;
+      
+      if (excludeCompanies.length > 0) {
+        console.log('[Step 3] Filtering excluded companies...');
+        const filterResult = this.processor.filterExcludedCompanies(processedJobs, excludeCompanies);
+        filteredJobs = filterResult.filtered;
+        excludedCount = filterResult.excluded;
+        console.log(`✓ Filtered: ${processedJobs.length} → ${filteredJobs.length} jobs (${excludedCount} excluded)\n`);
+      } else {
+        console.log('[Step 3] No company exclusions configured\n');
+      }
+
+      // Step 4: Deduplicate by company
+      console.log('[Step 4] Deduplicating by company...');
+      const deduplicatedJobs = this.processor.deduplicateByCompany(filteredJobs);
+      console.log(`✓ Deduplicated: ${filteredJobs.length} → ${deduplicatedJobs.length} unique jobs\n`);
+
+      // Step 5: Push to Google Sheets
+      console.log('[Step 5] Pushing to Google Sheets...');
       const sheetsResult = await this.sheets.appendJobs(deduplicatedJobs);
       console.log(`✓ Appended ${sheetsResult.appended} jobs, skipped ${sheetsResult.skipped} duplicates\n`);
 
@@ -83,14 +106,22 @@ class LinkedInJobScraper {
       console.log('Run Complete - Summary');
       console.log('='.repeat(60));
       console.log(`Jobs Scraped: ${scrapeResult.items.length}`);
-      console.log(`Jobs Processed: ${deduplicatedJobs.length}`);
+      console.log(`Jobs Processed: ${processedJobs.length}`);
+      if (excludedCount > 0) {
+        console.log(`Jobs Excluded: ${excludedCount}`);
+      }
+      console.log(`Jobs After Filtering: ${filteredJobs.length}`);
+      console.log(`Jobs After Deduplication: ${deduplicatedJobs.length}`);
       console.log(`Jobs Appended: ${sheetsResult.appended}`);
-      console.log(`Jobs Skipped: ${sheetsResult.skipped}`);
+      console.log(`Jobs Skipped (duplicates): ${sheetsResult.skipped}`);
       console.log('='.repeat(60));
 
       return {
         scraped: scrapeResult.items.length,
-        processed: deduplicatedJobs.length,
+        processed: processedJobs.length,
+        excluded: excludedCount,
+        filtered: filteredJobs.length,
+        deduplicated: deduplicatedJobs.length,
         appended: sheetsResult.appended,
         skipped: sheetsResult.skipped
       };

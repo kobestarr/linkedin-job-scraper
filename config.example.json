@@ -9,10 +9,11 @@
     "credentialsPath": "./credentials/google-sheets-credentials.json"
   },
   "scraping": {
-    "jobTitle": "Publicist",
+    "jobTitle": "Salesforce Developer",
     "location": "United States",
     "dateRange": "last24hours",
-    "maxResults": 50
+    "maxResults": 50,
+    "excludeCompanies": ["Salesforce"]
   },
   "scheduler": {
     "enabled": true,
