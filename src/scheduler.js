@@ -4,7 +4,7 @@
  */
 
 const cron = require('node-cron');
-const LinkedInJobScraper = require('./src/scraper');
+const LinkedInJobScraper = require('./scraper');
 const fs = require('fs');
 const path = require('path');
 

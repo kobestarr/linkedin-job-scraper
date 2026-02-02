@@ -6,9 +6,9 @@
 require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
-const ApifyJobScraper = require('./src/apify-client');
-const JobDataProcessor = require('./src/data-processor');
-const GoogleSheetsClient = require('./src/google-sheets-client');
+const ApifyJobScraper = require('./apify-client');
+const JobDataProcessor = require('./data-processor');
+const GoogleSheetsClient = require('./google-sheets-client');
 
 class LinkedInJobScraper {
   constructor(configPath = './config.json') {
