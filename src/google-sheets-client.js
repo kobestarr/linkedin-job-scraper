@@ -9,11 +9,39 @@ const path = require('path');
 
 class GoogleSheetsClient {
   constructor(config) {
-    this.spreadsheetId = config.spreadsheetId;
+    // Extract spreadsheet ID from URL if provided
+    this.spreadsheetId = this.extractSpreadsheetId(config.spreadsheetId || config.spreadsheetUrl);
     this.sheetName = config.sheetName || 'LinkedIn Jobs';
     this.credentialsPath = config.credentialsPath;
     this.auth = null;
     this.sheets = null;
+  }
+
+  /**
+   * Extract spreadsheet ID from Google Sheets URL
+   * Supports formats:
+   * - https://docs.google.com/spreadsheets/d/SPREADSHEET_ID/edit
+   * - https://docs.google.com/spreadsheets/d/SPREADSHEET_ID/edit#gid=0
+   * - Just the ID itself
+   */
+  extractSpreadsheetId(input) {
+    if (!input) {
+      throw new Error('Spreadsheet ID or URL is required');
+    }
+
+    // If it's already just an ID (no slashes), return as-is
+    if (!input.includes('/')) {
+      return input;
+    }
+
+    // Extract ID from URL
+    const match = input.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+    if (match && match[1]) {
+      return match[1];
+    }
+
+    // If no match, assume it's the ID
+    return input;
   }
 
   /**
