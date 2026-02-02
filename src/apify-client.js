@@ -1,6 +1,7 @@
 /**
  * Apify LinkedIn Job Scraper Integration
  * Handles connection to Apify and running LinkedIn Job Scraper actor
+ * Uses cheap_scraper/linkedin-job-scraper - cheapest option at $0.35/1K jobs
  */
 
 const { ApifyClient } = require('apify-client');
@@ -11,13 +12,24 @@ class ApifyJobScraper {
       throw new Error('Apify API token is required');
     }
     this.client = new ApifyClient({ token: apiToken });
-    // Default to Apify Linkedin Job Scrapper [NO COOKIES] - most economical
-    
-    if (!apiToken) {
-      throw new Error('Apify API token is required');
-    }
-    this.client = new ApifyClient({ token: apiToken });
-     // Default actor ID - may need to be updated
+    // Default to cheap_scraper/linkedin-job-scraper - cheapest option ($0.35/1K at Gold tier)
+    // Actor ID: 2rJKkhh7vjpX7pvjg
+    this.actorId = actorId || '2rJKkhh7vjpX7pvjg';
+  }
+
+  /**
+   * Map date range to cheap_scraper format
+   * @param {string} dateRange - Date range (e.g., "last24hours", "last7days", "last30days")
+   * @returns {string} Mapped date range (e.g., "r86400", "r604800", "r2592000")
+   */
+  mapDateRange(dateRange) {
+    const mapping = {
+      'last24hours': 'r86400',
+      'last7days': 'r604800',
+      'last30days': 'r2592000',
+      'any': null // No filter
+    };
+    return mapping[dateRange] || mapping['last24hours'];
   }
 
   /**
@@ -25,7 +37,7 @@ class ApifyJobScraper {
    * @param {Object} options - Scraping options
    * @param {string} options.jobTitle - Job title to search for
    * @param {string} options.location - Location (country-level, e.g., "United States")
-   * @param {string} options.dateRange - Date range filter (e.g., "last24hours")
+   * @param {string} options.dateRange - Date range filter (e.g., "last24hours", "last7days", "last30days")
    * @param {number} options.maxResults - Maximum number of results (default: 50)
    * @returns {Promise<Object>} Run result with dataset items
    */
@@ -42,15 +54,27 @@ class ApifyJobScraper {
     }
 
     console.log(`[Apify] Starting scrape for: "${jobTitle}" in "${location}"`);
+    console.log(`[Apify] Using actor: ${this.actorId} (cheap_scraper)`);
 
     try {
+      // Map parameters to cheap_scraper format
+      const actorInput = {
+        keyword: [jobTitle], // cheap_scraper expects array of keywords
+        location: location,
+        maxItems: maxResults, // cheap_scraper uses maxItems instead of limit
+        saveOnlyUniqueItems: true // Enable deduplication to save money
+      };
+
+      // Add date filter if specified
+      const publishedAt = this.mapDateRange(dateRange);
+      if (publishedAt) {
+        actorInput.publishedAt = publishedAt;
+      }
+
+      console.log(`[Apify] Actor input:`, JSON.stringify(actorInput, null, 2));
+
       // Run the actor
-      const run = await this.client.actor(this.actorId).call({
-        jobTitle,
-        location,
-        publishedIn: dateRange,
-        limit: maxResults
-      });
+      const run = await this.client.actor(this.actorId).call(actorInput);
 
       console.log(`[Apify] Run started: ${run.id}`);
 

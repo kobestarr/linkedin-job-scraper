@@ -1,7 +1,7 @@
 {
   "apify": {
     "apiToken": "YOUR_APIFY_API_TOKEN",
-    "actorId": "n9WWs3eofIvboPcgK"
+    "actorId": "2rJKkhh7vjpX7pvjg"
   },
   "googleSheets": {
     "spreadsheetId": "YOUR_SPREADSHEET_ID",
