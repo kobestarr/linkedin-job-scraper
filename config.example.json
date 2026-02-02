@@ -1,0 +1,22 @@
+{
+  "apify": {
+    "apiToken": "YOUR_APIFY_API_TOKEN",
+    "actorId": "n9WWs3eofIvboPcgK"
+  },
+  "googleSheets": {
+    "spreadsheetId": "YOUR_SPREADSHEET_ID",
+    "sheetName": "LinkedIn Jobs",
+    "credentialsPath": "./credentials/google-sheets-credentials.json"
+  },
+  "scraping": {
+    "jobTitle": "Publicist",
+    "location": "United States",
+    "dateRange": "last24hours",
+    "maxResults": 50
+  },
+  "scheduler": {
+    "enabled": true,
+    "schedule": "0 10 * * *",
+    "timezone": "America/New_York"
+  }
+}

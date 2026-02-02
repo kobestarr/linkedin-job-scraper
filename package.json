@@ -1,0 +1,25 @@
+{
+  "name": "linkedin-job-scraper",
+  "version": "1.0.0",
+  "description": "Automated LinkedIn job scraping system that pushes to Google Sheets",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node index.js",
+    "scrape": "node src/scraper.js",
+    "test": "node src/test.js"
+  },
+  "keywords": [
+    "linkedin",
+    "job-scraping",
+    "apify",
+    "google-sheets"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "apify-client": "^2.8.2",
+    "googleapis": "^128.0.0",
+    "node-cron": "^3.0.3",
+    "dotenv": "^16.3.1"
+  }
+}
