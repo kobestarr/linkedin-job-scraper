@@ -4,7 +4,7 @@
     "actorId": "2rJKkhh7vjpX7pvjg"
   },
   "googleSheets": {
-    "spreadsheetId": "YOUR_SPREADSHEET_ID",
+    "spreadsheetId": "https://docs.google.com/spreadsheets/d/YOUR_SPREADSHEET_ID/edit",
     "sheetName": "LinkedIn Jobs",
     "credentialsPath": "./credentials/google-sheets-credentials.json"
   },
