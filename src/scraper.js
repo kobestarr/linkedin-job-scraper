@@ -5,7 +5,6 @@
 
 require('dotenv').config();
 const fs = require('fs');
-const path = require('path');
 const ApifyJobScraper = require('./apify-client');
 const JobDataProcessor = require('./data-processor');
 const GoogleSheetsClient = require('./google-sheets-client');
@@ -133,22 +132,46 @@ class LinkedInJobScraper {
   }
 }
 
+/**
+ * Parse and validate CLI argument
+ * @param {Array} args - Command line arguments
+ * @param {string} flag - Flag to look for (e.g., '--job-title')
+ * @returns {string|null} The argument value or null if not found/invalid
+ */
+function getCliArg(args, flag) {
+  const index = args.indexOf(flag);
+  if (index === -1) return null;
+
+  const value = args[index + 1];
+  if (value === undefined || value.startsWith('--')) {
+    console.error(`Error: ${flag} requires a value`);
+    process.exit(1);
+  }
+  return value;
+}
+
 // Run if called directly
 if (require.main === module) {
   const scraper = new LinkedInJobScraper();
-  
+
   // Allow command-line overrides
   const args = process.argv.slice(2);
   const options = {};
-  
-  if (args.includes('--job-title')) {
-    options.jobTitle = args[args.indexOf('--job-title') + 1];
-  }
-  if (args.includes('--location')) {
-    options.location = args[args.indexOf('--location') + 1];
-  }
-  if (args.includes('--max-results')) {
-    options.maxResults = parseInt(args[args.indexOf('--max-results') + 1], 10);
+
+  const jobTitle = getCliArg(args, '--job-title');
+  if (jobTitle) options.jobTitle = jobTitle;
+
+  const location = getCliArg(args, '--location');
+  if (location) options.location = location;
+
+  const maxResults = getCliArg(args, '--max-results');
+  if (maxResults) {
+    const parsed = parseInt(maxResults, 10);
+    if (isNaN(parsed) || parsed <= 0) {
+      console.error('Error: --max-results must be a positive number');
+      process.exit(1);
+    }
+    options.maxResults = parsed;
   }
 
   scraper.run(options)

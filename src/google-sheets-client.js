@@ -3,9 +3,33 @@
  * Handles authentication and data pushing to Google Sheets
  */
 
+require('dotenv').config();
 const { google } = require('googleapis');
 const fs = require('fs');
-const path = require('path');
+
+/**
+ * Retry a function with exponential backoff
+ * @param {Function} fn - Async function to retry
+ * @param {number} maxRetries - Maximum number of retries (default: 3)
+ * @param {number} baseDelay - Base delay in ms (default: 1000)
+ * @returns {Promise<any>} Result of the function
+ */
+async function withRetry(fn, maxRetries = 3, baseDelay = 1000) {
+  let lastError;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error;
+      if (attempt < maxRetries) {
+        const delay = baseDelay * Math.pow(2, attempt);
+        console.log(`[Sheets] Attempt ${attempt + 1} failed, retrying in ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+  }
+  throw lastError;
+}
 
 class GoogleSheetsClient {
   constructor(config) {
@@ -69,27 +93,31 @@ class GoogleSheetsClient {
    */
   async ensureSheetExists() {
     try {
-      const spreadsheet = await this.sheets.spreadsheets.get({
-        spreadsheetId: this.spreadsheetId
-      });
+      const spreadsheet = await withRetry(() =>
+        this.sheets.spreadsheets.get({
+          spreadsheetId: this.spreadsheetId
+        })
+      );
 
       const sheetExists = spreadsheet.data.sheets.some(
         sheet => sheet.properties.title === this.sheetName
       );
 
       if (!sheetExists) {
-        await this.sheets.spreadsheets.batchUpdate({
-          spreadsheetId: this.spreadsheetId,
-          requestBody: {
-            requests: [{
-              addSheet: {
-                properties: {
-                  title: this.sheetName
+        await withRetry(() =>
+          this.sheets.spreadsheets.batchUpdate({
+            spreadsheetId: this.spreadsheetId,
+            requestBody: {
+              requests: [{
+                addSheet: {
+                  properties: {
+                    title: this.sheetName
+                  }
                 }
-              }
-            }]
-          }
-        });
+              }]
+            }
+          })
+        );
         console.log(`[Sheets] Created sheet: ${this.sheetName}`);
       }
 
@@ -106,10 +134,12 @@ class GoogleSheetsClient {
    */
   async setHeadersIfNeeded() {
     try {
-      const response = await this.sheets.spreadsheets.values.get({
-        spreadsheetId: this.spreadsheetId,
-        range: `${this.sheetName}!A1:L1`
-      });
+      const response = await withRetry(() =>
+        this.sheets.spreadsheets.values.get({
+          spreadsheetId: this.spreadsheetId,
+          range: `${this.sheetName}!A1:L1`
+        })
+      );
 
       const existingHeaders = response.data.values && response.data.values[0];
       
@@ -129,14 +159,16 @@ class GoogleSheetsClient {
           'Status'
         ];
 
-        await this.sheets.spreadsheets.values.update({
-          spreadsheetId: this.spreadsheetId,
-          range: `${this.sheetName}!A1`,
-          valueInputOption: 'RAW',
-          requestBody: {
-            values: [headers]
-          }
-        });
+        await withRetry(() =>
+          this.sheets.spreadsheets.values.update({
+            spreadsheetId: this.spreadsheetId,
+            range: `${this.sheetName}!A1`,
+            valueInputOption: 'RAW',
+            requestBody: {
+              values: [headers]
+            }
+          })
+        );
 
         console.log('[Sheets] Set headers');
       }
@@ -148,27 +180,31 @@ class GoogleSheetsClient {
 
   /**
    * Get existing company names from sheet (for deduplication)
+   * Uses a row limit to prevent memory issues with large datasets
+   * @param {number} maxRows - Maximum rows to fetch (default: 10000)
    * @returns {Promise<Set>} Set of existing company names (lowercase)
    */
-  async getExistingCompanies() {
+  async getExistingCompanies(maxRows = 10000) {
     try {
-      const response = await this.sheets.spreadsheets.values.get({
-        spreadsheetId: this.spreadsheetId,
-        range: `${this.sheetName}!C:C` // Column C is Company Name
-      });
+      // Fetch limited range to prevent memory issues with very large sheets
+      const response = await withRetry(() =>
+        this.sheets.spreadsheets.values.get({
+          spreadsheetId: this.spreadsheetId,
+          range: `${this.sheetName}!C2:C${maxRows + 1}` // Column C, skip header, limit rows
+        })
+      );
 
       const rows = response.data.values || [];
       const companies = new Set();
-      
-      // Skip header row (index 0)
-      for (let i = 1; i < rows.length; i++) {
-        const companyName = rows[i][0];
+
+      for (const row of rows) {
+        const companyName = row[0];
         if (companyName) {
           companies.add(companyName.toLowerCase().trim());
         }
       }
 
-      console.log(`[Sheets] Found ${companies.size} existing companies`);
+      console.log(`[Sheets] Found ${companies.size} existing companies (checked up to ${maxRows} rows)`);
       return companies;
     } catch (error) {
       console.error('[Sheets] Error getting existing companies:', error.message);
@@ -223,15 +259,17 @@ class GoogleSheetsClient {
     ]);
 
     try {
-      await this.sheets.spreadsheets.values.append({
-        spreadsheetId: this.spreadsheetId,
-        range: `${this.sheetName}!A:L`,
-        valueInputOption: 'RAW',
-        insertDataOption: 'INSERT_ROWS',
-        requestBody: {
-          values: rows
-        }
-      });
+      await withRetry(() =>
+        this.sheets.spreadsheets.values.append({
+          spreadsheetId: this.spreadsheetId,
+          range: `${this.sheetName}!A:L`,
+          valueInputOption: 'RAW',
+          insertDataOption: 'INSERT_ROWS',
+          requestBody: {
+            values: rows
+          }
+        })
+      );
 
       console.log(`[Sheets] Appended ${newJobs.length} jobs (skipped ${jobs.length - newJobs.length} duplicates)`);
       

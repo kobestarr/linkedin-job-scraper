@@ -12,7 +12,6 @@ class JobScraperScheduler {
   constructor(configPath = './config.json') {
     this.config = this.loadConfig(configPath);
     this.jobs = [];
-    this.scrapers = new Map();
   }
 
   /**

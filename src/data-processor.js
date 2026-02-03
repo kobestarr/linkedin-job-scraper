@@ -109,10 +109,11 @@ class JobDataProcessor {
 
     jobs.forEach(job => {
       const companyNameLower = job.companyName.toLowerCase().trim();
-      
-      // Check if company name contains any excluded company name
-      const shouldExclude = excludeLower.some(excludedName => 
-        companyNameLower.includes(excludedName) || excludedName.includes(companyNameLower)
+
+      // Check if company name contains any excluded company name (one-directional match)
+      // e.g., "Salesforce" in exclude list matches "Salesforce Inc" or "Salesforce.com"
+      const shouldExclude = excludeLower.some(excludedName =>
+        companyNameLower.includes(excludedName)
       );
 
       if (shouldExclude) {
@@ -144,16 +145,19 @@ class JobDataProcessor {
 
     jobs.forEach(job => {
       const companyKey = job.companyName.toLowerCase().trim();
-      
+
       if (!companyMap.has(companyKey)) {
         companyMap.set(companyKey, job);
       } else {
-        // Keep the most recent posting
+        // Keep the most recent posting using Date objects for comparison
         const existing = companyMap.get(companyKey);
-        const existingDate = existing.postedDate || '';
-        const newDate = job.postedDate || '';
-        
-        if (newDate > existingDate) {
+        const existingDate = existing.postedDate ? new Date(existing.postedDate) : null;
+        const newDate = job.postedDate ? new Date(job.postedDate) : null;
+
+        // Prefer job with a valid date, or the newer date
+        if (!existingDate && newDate) {
+          companyMap.set(companyKey, job);
+        } else if (existingDate && newDate && newDate > existingDate) {
           companyMap.set(companyKey, job);
         }
       }

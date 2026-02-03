@@ -4,7 +4,32 @@
  * Uses cheap_scraper/linkedin-job-scraper - cheapest option at $0.35/1K jobs
  */
 
+require('dotenv').config();
 const { ApifyClient } = require('apify-client');
+
+/**
+ * Retry a function with exponential backoff
+ * @param {Function} fn - Async function to retry
+ * @param {number} maxRetries - Maximum number of retries (default: 3)
+ * @param {number} baseDelay - Base delay in ms (default: 1000)
+ * @returns {Promise<any>} Result of the function
+ */
+async function withRetry(fn, maxRetries = 3, baseDelay = 1000) {
+  let lastError;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error;
+      if (attempt < maxRetries) {
+        const delay = baseDelay * Math.pow(2, attempt);
+        console.log(`[Apify] Attempt ${attempt + 1} failed, retrying in ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+  }
+  throw lastError;
+}
 
 class ApifyJobScraper {
   constructor(apiToken, actorId = null) {
@@ -73,23 +98,31 @@ class ApifyJobScraper {
 
       console.log(`[Apify] Actor input:`, JSON.stringify(actorInput, null, 2));
 
-      // Run the actor
-      const run = await this.client.actor(this.actorId).call(actorInput);
+      // Run the actor with retry
+      const run = await withRetry(
+        () => this.client.actor(this.actorId).call(actorInput),
+        3,
+        2000
+      );
 
       console.log(`[Apify] Run started: ${run.id}`);
 
       // Wait for the run to finish
       const finishedRun = await this.client.run(run.id).waitForFinish();
-      
+
       if (finishedRun.status !== 'SUCCEEDED') {
         throw new Error(`Apify run failed with status: ${finishedRun.status}`);
       }
 
       console.log(`[Apify] Run completed: ${finishedRun.id}`);
 
-      // Get the dataset items
+      // Get the dataset items with retry
       const datasetId = finishedRun.defaultDatasetId;
-      const { items } = await this.client.dataset(datasetId).listItems();
+      const { items } = await withRetry(
+        () => this.client.dataset(datasetId).listItems(),
+        3,
+        1000
+      );
 
       console.log(`[Apify] Found ${items.length} jobs`);
 
@@ -112,7 +145,11 @@ class ApifyJobScraper {
    */
   async getDatasetItems(datasetId) {
     try {
-      const { items } = await this.client.dataset(datasetId).listItems();
+      const { items } = await withRetry(
+        () => this.client.dataset(datasetId).listItems(),
+        3,
+        1000
+      );
       return items;
     } catch (error) {
       console.error('[Apify] Error getting dataset items:', error.message);
