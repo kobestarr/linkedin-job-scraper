@@ -1,6 +1,5 @@
 'use client';
 
-import { motion } from 'framer-motion';
 import Image from 'next/image';
 import { useState } from 'react';
 
@@ -11,14 +10,6 @@ interface LogoHeaderProps {
   onSettingsClick?: () => void;
 }
 
-/**
- * LogoHeader - Animated logo header with white-label support
- *
- * Features:
- * - Animated logo entrance (fade + scale + blur)
- * - Fallback to text logo if no image or on error
- * - Settings button for theme configuration
- */
 export function LogoHeader({
   logoUrl,
   logoAlt = 'Logo',
@@ -30,16 +21,8 @@ export function LogoHeader({
 
   return (
     <header className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4">
-      {/* Logo with entrance animation */}
-      <motion.div
-        initial={{ opacity: 0, scale: 0.8, y: -10, filter: 'blur(10px)' }}
-        animate={{ opacity: 1, scale: 1, y: 0, filter: 'blur(0px)' }}
-        transition={{
-          duration: 0.8,
-          ease: [0.34, 1.56, 0.64, 1],
-        }}
-        className="flex items-center gap-2 sm:gap-3"
-      >
+      {/* Logo */}
+      <div className="flex items-center gap-2 sm:gap-3">
         {shouldShowImage ? (
           <div className="relative w-8 h-8 sm:w-10 sm:h-10 flex-shrink-0">
             <Image
@@ -60,14 +43,11 @@ export function LogoHeader({
         <span className="text-base sm:text-xl font-semibold text-white/90 truncate">
           Job Intelligence
         </span>
-      </motion.div>
+      </div>
 
       {/* Settings button */}
       {showSettings && (
-        <motion.button
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.5 }}
+        <button
           onClick={onSettingsClick}
           className="btn-ghost flex items-center gap-2 text-white/60 hover:text-white/90"
         >
@@ -86,7 +66,7 @@ export function LogoHeader({
             <circle cx="12" cy="12" r="3" />
           </svg>
           <span className="hidden sm:inline">Settings</span>
-        </motion.button>
+        </button>
       )}
     </header>
   );
