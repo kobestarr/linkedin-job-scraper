@@ -1,5 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Enable standalone output for Docker deployments
+  output: 'standalone',
   // Exclude legacy src/ folder from Next.js compilation
   webpack: (config) => {
     config.externals = [...(config.externals || []), 'apify-client', 'googleapis', 'node-cron'];

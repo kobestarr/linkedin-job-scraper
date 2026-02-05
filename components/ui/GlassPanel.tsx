@@ -4,10 +4,11 @@ import { motion, HTMLMotionProps } from 'framer-motion';
 import { forwardRef } from 'react';
 import { cn } from '@/lib/utils';
 
-interface GlassPanelProps extends Omit<HTMLMotionProps<'div'>, 'ref'> {
+interface GlassPanelProps extends Omit<HTMLMotionProps<'div'>, 'ref' | 'children'> {
   variant?: 'default' | 'subtle' | 'card';
   animate?: boolean;
   delay?: number;
+  children?: React.ReactNode;
 }
 
 /**
