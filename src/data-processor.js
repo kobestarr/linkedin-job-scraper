@@ -3,19 +3,8 @@
  * Parses, cleans, and deduplicates job data from Apify
  */
 
-// Simple logger
-const logger = {
-  info: (message, meta) => {
-    // eslint-disable-next-line no-console
-    console.log(`[${new Date().toISOString()}] [INFO] ${message}`, meta ? JSON.stringify(meta) : '');
-  },
-  debug: (message, meta) => {
-    if (process.env.DEBUG) {
-      // eslint-disable-next-line no-console
-      console.debug(`[${new Date().toISOString()}] [DEBUG] ${message}`, meta ? JSON.stringify(meta) : '');
-    }
-  }
-};
+const logger = require('./utils/logger');
+const { sanitizeString } = require('./utils/validators');
 
 class JobDataProcessor {
   /**
@@ -70,7 +59,7 @@ class JobDataProcessor {
    */
   cleanCompanyName(companyName) {
     if (!companyName) return 'Unknown';
-    return companyName.trim().replace(/\s+/g, ' ');
+    return sanitizeString(companyName);
   }
 
   /**
@@ -80,7 +69,7 @@ class JobDataProcessor {
    */
   cleanLocation(location) {
     if (!location) return '';
-    return location.trim().replace(/\s+/g, ' ');
+    return sanitizeString(location);
   }
 
   /**

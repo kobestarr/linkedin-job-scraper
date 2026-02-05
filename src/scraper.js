@@ -8,33 +8,19 @@ const fs = require('fs');
 const ApifyJobScraper = require('./apify-client');
 const JobDataProcessor = require('./data-processor');
 const GoogleSheetsClient = require('./google-sheets-client');
-
-// Simple logger
-const logger = {
-  info: (message, meta) => {
-    // eslint-disable-next-line no-console
-    console.log(`[${new Date().toISOString()}] [INFO] ${message}`, meta ? JSON.stringify(meta) : '');
-  },
-  error: (message, meta) => {
-    // eslint-disable-next-line no-console
-    console.error(`[${new Date().toISOString()}] [ERROR] ${message}`, meta ? JSON.stringify(meta) : '');
-  },
-  debug: (message, meta) => {
-    if (process.env.DEBUG) {
-      // eslint-disable-next-line no-console
-      console.debug(`[${new Date().toISOString()}] [DEBUG] ${message}`, meta ? JSON.stringify(meta) : '');
-    }
-  },
-  // CLI-friendly output (no timestamps for user-facing messages)
-  cli: (message) => {
-    // eslint-disable-next-line no-console
-    console.log(message);
-  }
-};
+const logger = require('./utils/logger');
+const { validateScrapingConfig, validateJobTitle, validateLocation, validateMaxResults } = require('./utils/validators');
 
 class LinkedInJobScraper {
   constructor(configPath = './config.json') {
     this.config = this.loadConfig(configPath);
+    
+    // Validate config on load
+    const configValidation = validateScrapingConfig(this.config.scraping);
+    if (!configValidation.valid) {
+      throw new Error(`Invalid scraping configuration: ${configValidation.error}`);
+    }
+    
     this.apify = new ApifyJobScraper(this.config.apify.apiToken, this.config.apify.actorId);
     this.processor = new JobDataProcessor();
     this.sheets = new GoogleSheetsClient(this.config.googleSheets);
@@ -47,7 +33,23 @@ class LinkedInJobScraper {
     if (!fs.existsSync(configPath)) {
       throw new Error(`Config file not found: ${configPath}. Please copy config.example.json to config.json`);
     }
-    return JSON.parse(fs.readFileSync(configPath, 'utf8'));
+    
+    const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+    
+    // Override with environment variables if present
+    if (process.env.APIFY_API_TOKEN) {
+      config.apify.apiToken = process.env.APIFY_API_TOKEN;
+    }
+    
+    if (process.env.GOOGLE_SHEETS_CREDENTIALS_PATH) {
+      config.googleSheets.credentialsPath = process.env.GOOGLE_SHEETS_CREDENTIALS_PATH;
+    }
+    
+    if (process.env.GOOGLE_SHEETS_SPREADSHEET_ID) {
+      config.googleSheets.spreadsheetId = process.env.GOOGLE_SHEETS_SPREADSHEET_ID;
+    }
+    
+    return config;
   }
 
   /**
@@ -56,10 +58,17 @@ class LinkedInJobScraper {
    * @returns {Promise<Object>} Result summary
    */
   async run(options = {}) {
+    // Merge and validate options
     const scrapingConfig = {
       ...this.config.scraping,
       ...options
     };
+
+    // Validate merged config
+    const configValidation = validateScrapingConfig(scrapingConfig);
+    if (!configValidation.valid) {
+      throw new Error(`Invalid scraping options: ${configValidation.error}`);
+    }
 
     logger.cli('='.repeat(60));
     logger.cli('LinkedIn Job Scraper - Starting Run');
@@ -181,19 +190,33 @@ if (require.main === module) {
   const options = {};
 
   const jobTitle = getCliArg(args, '--job-title');
-  if (jobTitle) options.jobTitle = jobTitle;
+  if (jobTitle) {
+    const validation = validateJobTitle(jobTitle);
+    if (!validation.valid) {
+      logger.error(`Error: ${validation.error}`);
+      process.exit(1);
+    }
+    options.jobTitle = jobTitle;
+  }
 
   const location = getCliArg(args, '--location');
-  if (location) options.location = location;
+  if (location) {
+    const validation = validateLocation(location);
+    if (!validation.valid) {
+      logger.error(`Error: ${validation.error}`);
+      process.exit(1);
+    }
+    options.location = location;
+  }
 
   const maxResults = getCliArg(args, '--max-results');
   if (maxResults) {
-    const parsed = parseInt(maxResults, 10);
-    if (isNaN(parsed) || parsed <= 0) {
-      logger.error('Error: --max-results must be a positive number');
+    const validation = validateMaxResults(maxResults);
+    if (!validation.valid) {
+      logger.error(`Error: ${validation.error}`);
       process.exit(1);
     }
-    options.maxResults = parsed;
+    options.maxResults = parseInt(maxResults, 10);
   }
 
   scraper.run(options)

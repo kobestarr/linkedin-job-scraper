@@ -7,6 +7,87 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-02-05
+
+### Added
+
+- **Shared Utility Modules** (`src/utils/`)
+  - `logger.js` - Centralized logging utility replacing 5 duplicate logger definitions
+    - Consistent timestamp formatting across all modules
+    - Log levels: debug, info, warn, error, cli
+    - Environment-based debug control via `DEBUG` env var
+  - `retry.js` - Reusable retry logic with exponential backoff
+    - `withRetry()` - Standard retry with configurable attempts and delay
+    - `withRetryAndTimeout()` - Retry with timeout protection
+    - Operation naming for better logging context
+  - `validators.js` - Comprehensive input validation suite
+    - `validateJobTitle()` - Length, content, and character validation
+    - `validateLocation()` - Location string sanitization
+    - `validateMaxResults()` - Range validation (1-1000)
+    - `validateDateRange()` - Enum validation for date filters
+    - `validateCompanyName()` - Company name sanitization
+    - `validateScrapingConfig()` - Full config validation
+    - `sanitizeString()` - Input sanitization for dangerous characters
+
+- **Environment Variable Support**
+  - `APIFY_API_TOKEN` - Override Apify API token from config
+  - `GOOGLE_SHEETS_CREDENTIALS_PATH` - Override credentials path
+  - `GOOGLE_SHEETS_SPREADSHEET_ID` - Override spreadsheet ID
+  - Falls back to config.json values if env vars not set
+
+- **Timeout Protection**
+  - Apify `waitForFinish()` now has 5-minute timeout (300 seconds)
+  - Prevents indefinite hanging on stuck Apify runs
+  - Retry logic wraps timeout for resilience
+
+### Fixed
+
+- **Code Duplication (DRY Principle)**
+  - Eliminated 5 duplicate logger definitions across modules
+  - Eliminated 2 duplicate `withRetry()` function implementations
+  - All modules now import from `src/utils/`
+
+- **Input Validation**
+  - Added validation for CLI arguments (`--job-title`, `--location`, `--max-results`)
+  - Added validation for config.json scraping options on load
+  - Sanitization of user inputs to prevent injection (removes `<>{}")
+  - Proper error messages for invalid inputs
+
+- **Scheduler Config Passing**
+  - Fixed scheduler creating new scraper instances without config path
+  - Added `getScraper()` method for scraper instance reuse
+  - Scraper now properly loads config in scheduled runs
+  - Added config validation in scheduler constructor
+
+- **Apify Client Robustness**
+  - Added input validation before API calls
+  - Added timeout to `waitForFinish()` to prevent hanging
+  - Better error context in retry operations
+
+### Changed
+
+- **Module Structure**
+  - Created `src/utils/` directory for shared utilities
+  - Updated all imports in:
+    - `src/apify-client.js`
+    - `src/google-sheets-client.js`
+    - `src/data-processor.js`
+    - `src/scraper.js`
+    - `src/scheduler.js`
+
+- **Data Processor**
+  - Now uses shared `sanitizeString()` for cleaning company names and locations
+  - Uses shared logger for consistent output
+
+### Security
+
+- **Input Sanitization**
+  - Added protection against potentially dangerous characters in user inputs
+  - Validates and sanitizes job titles, locations, and company names
+  - Prevents code injection through config or CLI arguments
+
+---
+
 ## [1.0.1] - 2026-02-05
 
 ### Added
@@ -98,6 +179,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Retry logic with exponential backoff
   - Scheduler with cron support for automated runs
 
-[Unreleased]: https://github.com/kobestarr/linkedin-job-scraper/compare/v1.0.1...HEAD
+[Unreleased]: https://github.com/kobestarr/linkedin-job-scraper/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/kobestarr/linkedin-job-scraper/compare/v1.0.1...v1.1.0
 [1.0.1]: https://github.com/kobestarr/linkedin-job-scraper/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/kobestarr/linkedin-job-scraper/releases/tag/v1.0.0

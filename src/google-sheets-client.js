@@ -6,48 +6,8 @@
 require('dotenv').config();
 const { google } = require('googleapis');
 const fs = require('fs');
-
-// Simple logger
-const logger = {
-  info: (message, meta) => {
-    // eslint-disable-next-line no-console
-    console.log(`[${new Date().toISOString()}] [INFO] ${message}`, meta ? JSON.stringify(meta) : '');
-  },
-  error: (message, meta) => {
-    // eslint-disable-next-line no-console
-    console.error(`[${new Date().toISOString()}] [ERROR] ${message}`, meta ? JSON.stringify(meta) : '');
-  },
-  debug: (message, meta) => {
-    if (process.env.DEBUG) {
-      // eslint-disable-next-line no-console
-      console.debug(`[${new Date().toISOString()}] [DEBUG] ${message}`, meta ? JSON.stringify(meta) : '');
-    }
-  }
-};
-
-/**
- * Retry a function with exponential backoff
- * @param {Function} fn - Async function to retry
- * @param {number} maxRetries - Maximum number of retries (default: 3)
- * @param {number} baseDelay - Base delay in ms (default: 1000)
- * @returns {Promise<any>} Result of the function
- */
-async function withRetry(fn, maxRetries = 3, baseDelay = 1000) {
-  let lastError;
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    try {
-      return await fn();
-    } catch (error) {
-      lastError = error;
-      if (attempt < maxRetries) {
-        const delay = baseDelay * Math.pow(2, attempt);
-        logger.info(`[Sheets] Attempt ${attempt + 1} failed, retrying in ${delay}ms...`);
-        await new Promise(resolve => setTimeout(resolve, delay));
-      }
-    }
-  }
-  throw lastError;
-}
+const logger = require('./utils/logger');
+const { withRetry } = require('./utils/retry');
 
 class GoogleSheetsClient {
   constructor(config) {
@@ -114,7 +74,10 @@ class GoogleSheetsClient {
       const spreadsheet = await withRetry(() =>
         this.sheets.spreadsheets.get({
           spreadsheetId: this.spreadsheetId
-        })
+        }),
+        3,
+        1000,
+        'Sheets Get Spreadsheet'
       );
 
       const sheetExists = spreadsheet.data.sheets.some(
@@ -134,7 +97,10 @@ class GoogleSheetsClient {
                 }
               }]
             }
-          })
+          }),
+          3,
+          1000,
+          'Sheets Create Sheet'
         );
         logger.info('[Sheets] Created sheet', { sheetName: this.sheetName });
       }
@@ -156,7 +122,10 @@ class GoogleSheetsClient {
         this.sheets.spreadsheets.values.get({
           spreadsheetId: this.spreadsheetId,
           range: `${this.sheetName}!A1:L1`
-        })
+        }),
+        3,
+        1000,
+        'Sheets Get Headers'
       );
 
       const existingHeaders = response.data.values && response.data.values[0];
@@ -185,7 +154,10 @@ class GoogleSheetsClient {
             requestBody: {
               values: [headers]
             }
-          })
+          }),
+          3,
+          1000,
+          'Sheets Set Headers'
         );
 
         logger.info('[Sheets] Set headers');
@@ -209,7 +181,10 @@ class GoogleSheetsClient {
         this.sheets.spreadsheets.values.get({
           spreadsheetId: this.spreadsheetId,
           range: `${this.sheetName}!C2:C${maxRows + 1}` // Column C, skip header, limit rows
-        })
+        }),
+        3,
+        1000,
+        'Sheets Get Existing Companies'
       );
 
       const rows = response.data.values || [];
@@ -289,7 +264,10 @@ class GoogleSheetsClient {
           requestBody: {
             values: rows
           }
-        })
+        }),
+        3,
+        1000,
+        'Sheets Append Jobs'
       );
 
       logger.info('[Sheets] Jobs appended', { 

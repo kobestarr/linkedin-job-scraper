@@ -5,33 +5,19 @@
 
 const cron = require('node-cron');
 const LinkedInJobScraper = require('./scraper');
+const logger = require('./utils/logger');
+const { validateJobTitle, validateScrapingConfig } = require('./utils/validators');
 const fs = require('fs');
 const path = require('path');
 
-// Simple logger for Node.js (shared with other modules)
-const logger = {
-  info: (message, meta) => {
-    // eslint-disable-next-line no-console
-    console.log(`[${new Date().toISOString()}] [INFO] ${message}`, meta ? JSON.stringify(meta) : '');
-  },
-  error: (message, meta) => {
-    // eslint-disable-next-line no-console
-    console.error(`[${new Date().toISOString()}] [ERROR] ${message}`, meta ? JSON.stringify(meta) : '');
-  },
-  debug: (message, meta) => {
-    if (process.env.DEBUG) {
-      // eslint-disable-next-line no-console
-      console.debug(`[${new Date().toISOString()}] [DEBUG] ${message}`, meta ? JSON.stringify(meta) : '');
-    }
-  }
-};
-
 class JobScraperScheduler {
   constructor(configPath = './config.json') {
+    this.configPath = configPath;
     this.config = this.loadConfig(configPath);
     this.jobs = [];
     this.isRunning = false;
     this.shutdownHandlers = [];
+    this.scraperInstance = null;
   }
 
   /**
@@ -41,7 +27,27 @@ class JobScraperScheduler {
     if (!fs.existsSync(configPath)) {
       throw new Error(`Config file not found: ${configPath}`);
     }
-    return JSON.parse(fs.readFileSync(configPath, 'utf8'));
+    
+    const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+    
+    // Validate config
+    const configValidation = validateScrapingConfig(config.scraping);
+    if (!configValidation.valid) {
+      throw new Error(`Invalid configuration: ${configValidation.error}`);
+    }
+    
+    return config;
+  }
+
+  /**
+   * Get or create scraper instance
+   * Reuses the same scraper instance for all jobs to avoid reloading config
+   */
+  getScraper() {
+    if (!this.scraperInstance) {
+      this.scraperInstance = new LinkedInJobScraper(this.configPath);
+    }
+    return this.scraperInstance;
   }
 
   /**
@@ -50,6 +56,7 @@ class JobScraperScheduler {
    * @param {string} jobConfig.jobTitle - Job title to scrape
    * @param {string} jobConfig.schedule - Cron schedule (default: from config)
    * @param {string} jobConfig.location - Location (default: from config)
+   * @param {number} jobConfig.maxResults - Max results (default: from config)
    */
   addJob(jobConfig) {
     const {
@@ -61,6 +68,12 @@ class JobScraperScheduler {
 
     if (!jobTitle) {
       throw new Error('Job title is required');
+    }
+
+    // Validate job title
+    const validation = validateJobTitle(jobTitle);
+    if (!validation.valid) {
+      throw new Error(`Invalid job title: ${validation.error}`);
     }
 
     // Validate cron schedule
@@ -76,7 +89,8 @@ class JobScraperScheduler {
         logger.info(`[Scheduler] Running scheduled scrape for: "${jobTitle}"`);
         
         try {
-          const scraper = new LinkedInJobScraper();
+          // Use shared scraper instance with config path
+          const scraper = this.getScraper();
           await scraper.run({
             jobTitle,
             location,

@@ -6,48 +6,9 @@
 
 require('dotenv').config();
 const { ApifyClient } = require('apify-client');
-
-// Simple logger
-const logger = {
-  info: (message, meta) => {
-    // eslint-disable-next-line no-console
-    console.log(`[${new Date().toISOString()}] [INFO] ${message}`, meta ? JSON.stringify(meta) : '');
-  },
-  error: (message, meta) => {
-    // eslint-disable-next-line no-console
-    console.error(`[${new Date().toISOString()}] [ERROR] ${message}`, meta ? JSON.stringify(meta) : '');
-  },
-  debug: (message, meta) => {
-    if (process.env.DEBUG) {
-      // eslint-disable-next-line no-console
-      console.debug(`[${new Date().toISOString()}] [DEBUG] ${message}`, meta ? JSON.stringify(meta) : '');
-    }
-  }
-};
-
-/**
- * Retry a function with exponential backoff
- * @param {Function} fn - Async function to retry
- * @param {number} maxRetries - Maximum number of retries (default: 3)
- * @param {number} baseDelay - Base delay in ms (default: 1000)
- * @returns {Promise<any>} Result of the function
- */
-async function withRetry(fn, maxRetries = 3, baseDelay = 1000) {
-  let lastError;
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    try {
-      return await fn();
-    } catch (error) {
-      lastError = error;
-      if (attempt < maxRetries) {
-        const delay = baseDelay * Math.pow(2, attempt);
-        logger.info(`[Apify] Attempt ${attempt + 1} failed, retrying in ${delay}ms...`);
-        await new Promise(resolve => setTimeout(resolve, delay));
-      }
-    }
-  }
-  throw lastError;
-}
+const logger = require('./utils/logger');
+const { withRetry } = require('./utils/retry');
+const { validateJobTitle, validateMaxResults } = require('./utils/validators');
 
 class ApifyJobScraper {
   constructor(apiToken, actorId = null) {
@@ -92,8 +53,15 @@ class ApifyJobScraper {
       maxResults = 50
     } = options;
 
-    if (!jobTitle) {
-      throw new Error('Job title is required');
+    // Validate inputs
+    const jobTitleValidation = validateJobTitle(jobTitle);
+    if (!jobTitleValidation.valid) {
+      throw new Error(`Invalid job title: ${jobTitleValidation.error}`);
+    }
+
+    const maxResultsValidation = validateMaxResults(maxResults);
+    if (!maxResultsValidation.valid) {
+      throw new Error(`Invalid max results: ${maxResultsValidation.error}`);
     }
 
     logger.info('[Apify] Starting scrape', { jobTitle, location, actorId: this.actorId });
@@ -119,13 +87,22 @@ class ApifyJobScraper {
       const run = await withRetry(
         () => this.client.actor(this.actorId).call(actorInput),
         3,
-        2000
+        2000,
+        'Apify Actor Run'
       );
 
       logger.info('[Apify] Run started', { runId: run.id });
 
-      // Wait for the run to finish
-      const finishedRun = await this.client.run(run.id).waitForFinish();
+      // Wait for the run to finish with timeout (5 minutes)
+      const finishedRun = await withRetry(
+        async () => {
+          const result = await this.client.run(run.id).waitForFinish({ waitSecs: 300 });
+          return result;
+        },
+        2,
+        1000,
+        'Apify Wait for Finish'
+      );
 
       if (finishedRun.status !== 'SUCCEEDED') {
         throw new Error(`Apify run failed with status: ${finishedRun.status}`);
@@ -138,7 +115,8 @@ class ApifyJobScraper {
       const { items } = await withRetry(
         () => this.client.dataset(datasetId).listItems(),
         3,
-        1000
+        1000,
+        'Apify Dataset Fetch'
       );
 
       logger.info('[Apify] Jobs retrieved', { count: items.length });
@@ -165,7 +143,8 @@ class ApifyJobScraper {
       const { items } = await withRetry(
         () => this.client.dataset(datasetId).listItems(),
         3,
-        1000
+        1000,
+        'Apify Get Dataset Items'
       );
       return items;
     } catch (error) {
