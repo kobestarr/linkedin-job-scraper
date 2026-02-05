@@ -1,126 +1,79 @@
-# LinkedIn Job Scraper
+# Job Intelligence Platform
 
-Automated LinkedIn job scraping system that extracts jobs daily and pushes them to Google Sheets.
+Premium LinkedIn job scraping with a glassmorphism dashboard UI. Swappable providers, multi-instance deployment, automatic changelog.
 
-## Features
-
-- Daily automated scraping via Apify LinkedIn Job Scraper
-- One job title per run (discrete runs, support multiple job titles)
-- Country-level location filtering
-- Automatic deduplication by company name
-- Direct push to Google Sheets (no approval workflow)
-- Scheduled daily runs
-
-## Setup
-
-### 1. Install Dependencies
+## Quick Start (No API Keys Needed)
 
 ```bash
+git clone https://github.com/kobestarr/linkedin-job-scraper.git
+cd linkedin-job-scraper
 npm install
+cp .env.example .env   # defaults to mock data source
+npm run dev
 ```
 
-### 2. Configure Apify
+Open [http://localhost:3000](http://localhost:3000).
 
-1. Sign up for Apify account: https://apify.com
-2. Get your API token from: https://console.apify.com/account/integrations
-3. Find the LinkedIn Job Scraper actor ID (search in Apify store)
+To use real LinkedIn data, set `NEXT_PUBLIC_DATA_SOURCE=apify` and add your `APIFY_API_TOKEN` in `.env`.
 
-### 3. Configure Google Sheets
+## Architecture
 
-1. Create a Google Cloud Project
-2. Enable Google Sheets API
-3. Create OAuth2 credentials (Service Account recommended)
-4. Download credentials JSON file
-5. Share your Google Sheet with the service account email
-
-### 4. Configuration
-
-1. Copy `config.example.json` to `config.json`
-2. Update with your credentials:
-
-```json
-{
-  "apify": {
-    "apiToken": "YOUR_APIFY_API_TOKEN"
-  },
-  "googleSheets": {
-    "spreadsheetId": "YOUR_SPREADSHEET_ID",
-    "sheetName": "LinkedIn Jobs",
-    "credentialsPath": "./credentials/google-sheets-credentials.json"
-  },
-  "scraping": {
-    "jobTitle": "Publicist",
-    "location": "United States",
-    "dateRange": "last24hours",
-    "maxResults": 50
-  },
-  "scheduler": {
-    "enabled": true,
-    "schedule": "0 10 * * *",
-    "timezone": "America/New_York"
-  }
-}
+```
+                    ┌─────────────┐
+                    │   Next.js   │
+                    │  Dashboard  │
+                    └──────┬──────┘
+                           │
+              ┌────────────┼────────────┐
+              │            │            │
+        ┌─────┴─────┐ ┌───┴───┐ ┌─────┴─────┐
+        │ DataSource │ │Storage│ │ Outreach  │
+        │  Provider  │ │Provider│ │ Provider  │
+        └─────┬─────┘ └───┬───┘ └─────┬─────┘
+              │            │            │
+        ┌─────┴─────┐ ┌───┴───┐ ┌─────┴─────┐
+        │Apify│Mock │ │Local  │ │CSV│Smart- │
+        │     │     │ │Storage│ │   │lead   │
+        └───────────┘ └───────┘ └───────────┘
 ```
 
-### 5. Create Credentials Directory
+Swap any provider by changing an env var. See [docs/PROVIDERS.md](docs/PROVIDERS.md).
+
+## CLI Scraper
+
+The original CLI scraper still works alongside the web UI:
 
 ```bash
-mkdir -p credentials
-# Place your Google Sheets credentials JSON file here
+# One-off scrape to Google Sheets
+node src/scraper.js --job-title "Software Engineer" --location "United States"
+
+# Daily scheduler
+npm start
 ```
 
-## Usage
+See [GOOGLE_SETUP_BEGINNER.md](GOOGLE_SETUP_BEGINNER.md) for Google Sheets setup.
 
-### Manual Run
+## Versioning
+
+This project uses [Semantic Versioning](https://semver.org/) with [Conventional Commits](https://www.conventionalcommits.org/).
 
 ```bash
-# Run with default config
-node src/scraper.js
-
-# Override job title
-node src/scraper.js --job-title "Public Relations Manager" --location "United States"
+npm version patch   # Bug fix:     1.0.1 -> 1.0.2
+npm version minor   # New feature: 1.0.2 -> 1.1.0
+npm version major   # Breaking:    1.1.0 -> 2.0.0
 ```
 
-### Scheduled Runs
+Changelog is generated automatically. See [CHANGELOG.md](CHANGELOG.md).
 
-```bash
-# Start scheduler (runs jobs based on config schedule)
-node src/scheduler.js
-```
+## Documentation
 
-### Multiple Job Titles
-
-To scrape multiple job titles, you can:
-
-1. **Option 1**: Create separate config files and run multiple schedulers
-2. **Option 2**: Modify config to include `jobTitles` array (future enhancement)
-
-## Google Sheets Format
-
-The system creates/updates a sheet with these columns:
-
-1. Date Scraped
-2. Job Title
-3. Company Name
-4. Company LinkedIn URL
-5. Job Posting URL
-6. Location
-7. Posted Date
-8. Days Since Posted
-9. Employment Type
-10. Experience Level
-11. Job Description
-12. Status
-
-## Logging
-
-All operations are logged to console with timestamps and status indicators.
-
-## Error Handling
-
-- Retry logic for API failures
-- Graceful error handling
-- Continues processing even if some jobs fail
+| Doc | Description |
+|-----|-------------|
+| [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) | Dev setup, project structure, scripts |
+| [docs/PROVIDERS.md](docs/PROVIDERS.md) | Provider architecture, how to add new ones |
+| [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | Vercel, Docker, multi-instance deployment |
+| [.github/commit-convention.md](.github/commit-convention.md) | Commit message format |
+| [CHANGELOG.md](CHANGELOG.md) | Release history |
 
 ## License
 

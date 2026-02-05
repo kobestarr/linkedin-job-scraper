@@ -40,6 +40,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Prevents indefinite hanging on stuck Apify runs
   - Retry logic wraps timeout for resilience
 
+- **Mock DataSource Provider** (`lib/providers/data-source/mock.ts`)
+  - 20 realistic job listings with relative dates
+  - Simulated network delay with AbortSignal support
+  - Development without API keys: `NEXT_PUBLIC_DATA_SOURCE=mock`
+
+- **Client Configuration** (`lib/config/client.ts`)
+  - Environment-based branding (title, logo, colours)
+  - Multi-instance deployment support — one codebase, many clients
+  - Default search values per client
+
+- **CI/CD Pipelines** (`.github/workflows/`)
+  - `ci.yml`: Lint, typecheck, and build on push/PR to main
+  - `release.yml`: Automatic GitHub Release on tag push
+
+- **Docker Support**
+  - Multi-stage Dockerfile (deps → build → runner)
+  - Next.js standalone output mode
+  - Per-client containers via env vars
+
+- **Automatic Changelog**
+  - `conventional-changelog-cli` with npm version lifecycle
+  - `npm version patch/minor/major` auto-generates changelog, tags, and pushes
+  - Commit convention documented in `.github/commit-convention.md`
+
+- **Documentation**
+  - `docs/PROVIDERS.md` — Provider architecture and how to add new providers
+  - `docs/DEPLOYMENT.md` — Vercel, Docker, multi-instance deployment guide
+  - `docs/DEVELOPMENT.md` — Developer setup, project structure, scripts
+  - `docs/examples/client-acme.env.example` — Example client config
+
+- **Retroactive Git Tags**
+  - `v1.0.0` on Slice 1 foundation commit
+  - `v1.0.1` on code review fixes commit
+
 ### Fixed
 
 - **Code Duplication (DRY Principle)**
@@ -64,6 +98,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added timeout to `waitForFinish()` to prevent hanging
   - Better error context in retry operations
 
+- **GlassPanel TypeScript error**: Fixed `MotionValue` children type incompatibility with plain `<div>`
+
 ### Changed
 
 - **Module Structure**
@@ -78,6 +114,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Data Processor**
   - Now uses shared `sanitizeString()` for cleaning company names and locations
   - Uses shared logger for consistent output
+
+- **Provider Interface**: `DataSourceProvider.scrape()` now accepts optional `AbortSignal` (matches existing Apify implementation)
+- **README.md**: Complete rewrite with quick start, architecture diagram, and doc links
+- **`.env.example`**: Defaults to mock data source, added client/branding section
+- **`next.config.js`**: Added `output: 'standalone'` for Docker builds
+
+### Moved
+
+- `CODE_REVIEW.md` → `docs/archive/`
+- `MVP_STATUS.md` → `docs/archive/`
+- `SETUP.md` → `docs/archive/`
 
 ### Security
 

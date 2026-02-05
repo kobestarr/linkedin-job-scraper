@@ -7,6 +7,7 @@
 
 import type { DataSourceProvider } from './types';
 import { ApifyDataSource } from './apify';
+import { MockDataSource } from './mock';
 
 export type DataSourceType = 'apify' | 'captain-data' | 'mock';
 
@@ -16,10 +17,7 @@ const providers: Record<DataSourceType, () => DataSourceProvider> = {
     // Phase 2: Implement Captain Data provider
     throw new Error('Captain Data provider not yet implemented');
   },
-  mock: () => {
-    // For testing without API calls
-    throw new Error('Mock provider not yet implemented');
-  },
+  mock: () => new MockDataSource(),
 };
 
 let instance: DataSourceProvider | null = null;

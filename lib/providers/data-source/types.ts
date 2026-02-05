@@ -35,7 +35,7 @@ export interface DataSourceProvider {
   /**
    * Trigger a new scrape job
    */
-  scrape(options: ScrapeOptions): Promise<ScrapeResult>;
+  scrape(options: ScrapeOptions, signal?: AbortSignal): Promise<ScrapeResult>;
 
   /**
    * Get jobs from the most recent scrape (cached)
