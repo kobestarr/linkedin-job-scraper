@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion';
 import Image from 'next/image';
+import { useState } from 'react';
 
 interface LogoHeaderProps {
   logoUrl?: string;
@@ -15,7 +16,7 @@ interface LogoHeaderProps {
  *
  * Features:
  * - Animated logo entrance (fade + scale + blur)
- * - Fallback to text logo if no image
+ * - Fallback to text logo if no image or on error
  * - Settings button for theme configuration
  */
 export function LogoHeader({
@@ -24,6 +25,9 @@ export function LogoHeader({
   showSettings = true,
   onSettingsClick,
 }: LogoHeaderProps) {
+  const [imageError, setImageError] = useState(false);
+  const shouldShowImage = logoUrl && !imageError;
+
   return (
     <header className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4">
       {/* Logo with entrance animation */}
@@ -36,14 +40,18 @@ export function LogoHeader({
         }}
         className="flex items-center gap-2 sm:gap-3"
       >
-        {logoUrl ? (
-          <Image
-            src={logoUrl}
-            alt={logoAlt}
-            width={32}
-            height={32}
-            className="rounded-lg sm:w-10 sm:h-10"
-          />
+        {shouldShowImage ? (
+          <div className="relative w-8 h-8 sm:w-10 sm:h-10 flex-shrink-0">
+            <Image
+              src={logoUrl}
+              alt={logoAlt}
+              fill
+              className="object-contain rounded-lg"
+              onError={() => setImageError(true)}
+              priority
+              sizes="(max-width: 640px) 32px, 40px"
+            />
+          </div>
         ) : (
           <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center flex-shrink-0">
             <span className="text-white font-bold text-sm sm:text-lg">J</span>

@@ -9,6 +9,29 @@ const ApifyJobScraper = require('./apify-client');
 const JobDataProcessor = require('./data-processor');
 const GoogleSheetsClient = require('./google-sheets-client');
 
+// Simple logger
+const logger = {
+  info: (message, meta) => {
+    // eslint-disable-next-line no-console
+    console.log(`[${new Date().toISOString()}] [INFO] ${message}`, meta ? JSON.stringify(meta) : '');
+  },
+  error: (message, meta) => {
+    // eslint-disable-next-line no-console
+    console.error(`[${new Date().toISOString()}] [ERROR] ${message}`, meta ? JSON.stringify(meta) : '');
+  },
+  debug: (message, meta) => {
+    if (process.env.DEBUG) {
+      // eslint-disable-next-line no-console
+      console.debug(`[${new Date().toISOString()}] [DEBUG] ${message}`, meta ? JSON.stringify(meta) : '');
+    }
+  },
+  // CLI-friendly output (no timestamps for user-facing messages)
+  cli: (message) => {
+    // eslint-disable-next-line no-console
+    console.log(message);
+  }
+};
+
 class LinkedInJobScraper {
   constructor(configPath = './config.json') {
     this.config = this.loadConfig(configPath);
@@ -38,26 +61,26 @@ class LinkedInJobScraper {
       ...options
     };
 
-    console.log('='.repeat(60));
-    console.log('LinkedIn Job Scraper - Starting Run');
-    console.log('='.repeat(60));
-    console.log(`Job Title: ${scrapingConfig.jobTitle}`);
-    console.log(`Location: ${scrapingConfig.location}`);
-    console.log(`Date Range: ${scrapingConfig.dateRange}`);
-    console.log(`Max Results: ${scrapingConfig.maxResults}`);
+    logger.cli('='.repeat(60));
+    logger.cli('LinkedIn Job Scraper - Starting Run');
+    logger.cli('='.repeat(60));
+    logger.cli(`Job Title: ${scrapingConfig.jobTitle}`);
+    logger.cli(`Location: ${scrapingConfig.location}`);
+    logger.cli(`Date Range: ${scrapingConfig.dateRange}`);
+    logger.cli(`Max Results: ${scrapingConfig.maxResults}`);
     if (scrapingConfig.excludeCompanies && scrapingConfig.excludeCompanies.length > 0) {
-      console.log(`Exclude Companies: ${scrapingConfig.excludeCompanies.join(', ')}`);
+      logger.cli(`Exclude Companies: ${scrapingConfig.excludeCompanies.join(', ')}`);
     }
-    console.log('');
+    logger.cli('');
 
     try {
       // Step 1: Scrape jobs from Apify
-      console.log('[Step 1] Scraping jobs from LinkedIn via Apify...');
+      logger.cli('[Step 1] Scraping jobs from LinkedIn via Apify...');
       const scrapeResult = await this.apify.scrapeJobs(scrapingConfig);
-      console.log(`✓ Found ${scrapeResult.items.length} jobs\n`);
+      logger.cli(`✓ Found ${scrapeResult.items.length} jobs\n`);
 
       if (scrapeResult.items.length === 0) {
-        console.log('No jobs found. Exiting.');
+        logger.cli('No jobs found. Exiting.');
         return {
           scraped: 0,
           processed: 0,
@@ -68,12 +91,12 @@ class LinkedInJobScraper {
       }
 
       // Step 2: Process jobs
-      console.log('[Step 2] Processing jobs...');
+      logger.cli('[Step 2] Processing jobs...');
       const processedJobs = this.processor.processJobs(
         scrapeResult.items,
         scrapingConfig.jobTitle
       );
-      console.log(`✓ Processed ${processedJobs.length} jobs\n`);
+      logger.cli(`✓ Processed ${processedJobs.length} jobs\n`);
 
       // Step 3: Filter excluded companies
       const excludeCompanies = scrapingConfig.excludeCompanies || [];
@@ -81,39 +104,39 @@ class LinkedInJobScraper {
       let excludedCount = 0;
       
       if (excludeCompanies.length > 0) {
-        console.log('[Step 3] Filtering excluded companies...');
+        logger.cli('[Step 3] Filtering excluded companies...');
         const filterResult = this.processor.filterExcludedCompanies(processedJobs, excludeCompanies);
         filteredJobs = filterResult.filtered;
         excludedCount = filterResult.excluded;
-        console.log(`✓ Filtered: ${processedJobs.length} → ${filteredJobs.length} jobs (${excludedCount} excluded)\n`);
+        logger.cli(`✓ Filtered: ${processedJobs.length} → ${filteredJobs.length} jobs (${excludedCount} excluded)\n`);
       } else {
-        console.log('[Step 3] No company exclusions configured\n');
+        logger.cli('[Step 3] No company exclusions configured\n');
       }
 
       // Step 4: Deduplicate by company
-      console.log('[Step 4] Deduplicating by company...');
+      logger.cli('[Step 4] Deduplicating by company...');
       const deduplicatedJobs = this.processor.deduplicateByCompany(filteredJobs);
-      console.log(`✓ Deduplicated: ${filteredJobs.length} → ${deduplicatedJobs.length} unique jobs\n`);
+      logger.cli(`✓ Deduplicated: ${filteredJobs.length} → ${deduplicatedJobs.length} unique jobs\n`);
 
       // Step 5: Push to Google Sheets
-      console.log('[Step 5] Pushing to Google Sheets...');
+      logger.cli('[Step 5] Pushing to Google Sheets...');
       const sheetsResult = await this.sheets.appendJobs(deduplicatedJobs);
-      console.log(`✓ Appended ${sheetsResult.appended} jobs, skipped ${sheetsResult.skipped} duplicates\n`);
+      logger.cli(`✓ Appended ${sheetsResult.appended} jobs, skipped ${sheetsResult.skipped} duplicates\n`);
 
       // Summary
-      console.log('='.repeat(60));
-      console.log('Run Complete - Summary');
-      console.log('='.repeat(60));
-      console.log(`Jobs Scraped: ${scrapeResult.items.length}`);
-      console.log(`Jobs Processed: ${processedJobs.length}`);
+      logger.cli('='.repeat(60));
+      logger.cli('Run Complete - Summary');
+      logger.cli('='.repeat(60));
+      logger.cli(`Jobs Scraped: ${scrapeResult.items.length}`);
+      logger.cli(`Jobs Processed: ${processedJobs.length}`);
       if (excludedCount > 0) {
-        console.log(`Jobs Excluded: ${excludedCount}`);
+        logger.cli(`Jobs Excluded: ${excludedCount}`);
       }
-      console.log(`Jobs After Filtering: ${filteredJobs.length}`);
-      console.log(`Jobs After Deduplication: ${deduplicatedJobs.length}`);
-      console.log(`Jobs Appended: ${sheetsResult.appended}`);
-      console.log(`Jobs Skipped (duplicates): ${sheetsResult.skipped}`);
-      console.log('='.repeat(60));
+      logger.cli(`Jobs After Filtering: ${filteredJobs.length}`);
+      logger.cli(`Jobs After Deduplication: ${deduplicatedJobs.length}`);
+      logger.cli(`Jobs Appended: ${sheetsResult.appended}`);
+      logger.cli(`Jobs Skipped (duplicates): ${sheetsResult.skipped}`);
+      logger.cli('='.repeat(60));
 
       return {
         scraped: scrapeResult.items.length,
@@ -125,8 +148,7 @@ class LinkedInJobScraper {
         skipped: sheetsResult.skipped
       };
     } catch (error) {
-      console.error('\n❌ Error during scraping:', error.message);
-      console.error(error.stack);
+      logger.error('Error during scraping', { message: error.message, stack: error.stack });
       throw error;
     }
   }
@@ -144,7 +166,7 @@ function getCliArg(args, flag) {
 
   const value = args[index + 1];
   if (value === undefined || value.startsWith('--')) {
-    console.error(`Error: ${flag} requires a value`);
+    logger.error(`Error: ${flag} requires a value`);
     process.exit(1);
   }
   return value;
@@ -168,7 +190,7 @@ if (require.main === module) {
   if (maxResults) {
     const parsed = parseInt(maxResults, 10);
     if (isNaN(parsed) || parsed <= 0) {
-      console.error('Error: --max-results must be a positive number');
+      logger.error('Error: --max-results must be a positive number');
       process.exit(1);
     }
     options.maxResults = parsed;
@@ -176,11 +198,11 @@ if (require.main === module) {
 
   scraper.run(options)
     .then(result => {
-      console.log('\n✅ Scraping completed successfully');
+      logger.cli('\n✅ Scraping completed successfully');
       process.exit(0);
     })
     .catch(error => {
-      console.error('\n❌ Scraping failed:', error.message);
+      logger.error('\n❌ Scraping failed', { message: error.message });
       process.exit(1);
     });
 }

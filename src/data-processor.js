@@ -3,6 +3,20 @@
  * Parses, cleans, and deduplicates job data from Apify
  */
 
+// Simple logger
+const logger = {
+  info: (message, meta) => {
+    // eslint-disable-next-line no-console
+    console.log(`[${new Date().toISOString()}] [INFO] ${message}`, meta ? JSON.stringify(meta) : '');
+  },
+  debug: (message, meta) => {
+    if (process.env.DEBUG) {
+      // eslint-disable-next-line no-console
+      console.debug(`[${new Date().toISOString()}] [DEBUG] ${message}`, meta ? JSON.stringify(meta) : '');
+    }
+  }
+};
+
 class JobDataProcessor {
   /**
    * Process raw Apify job data
@@ -124,7 +138,7 @@ class JobDataProcessor {
     });
 
     if (excluded > 0) {
-      console.log(`[Processor] Excluded ${excluded} jobs from excluded companies`);
+      logger.info('[Processor] Excluded jobs from filtered companies', { excluded });
     }
 
     return { filtered, excluded };
@@ -164,7 +178,10 @@ class JobDataProcessor {
     });
 
     const deduplicated = Array.from(companyMap.values());
-    console.log(`[Processor] Deduplicated: ${jobs.length} → ${deduplicated.length} jobs`);
+    logger.info('[Processor] Deduplicated jobs', { 
+      before: jobs.length, 
+      after: deduplicated.length 
+    });
     
     return deduplicated;
   }

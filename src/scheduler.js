@@ -8,10 +8,30 @@ const LinkedInJobScraper = require('./scraper');
 const fs = require('fs');
 const path = require('path');
 
+// Simple logger for Node.js (shared with other modules)
+const logger = {
+  info: (message, meta) => {
+    // eslint-disable-next-line no-console
+    console.log(`[${new Date().toISOString()}] [INFO] ${message}`, meta ? JSON.stringify(meta) : '');
+  },
+  error: (message, meta) => {
+    // eslint-disable-next-line no-console
+    console.error(`[${new Date().toISOString()}] [ERROR] ${message}`, meta ? JSON.stringify(meta) : '');
+  },
+  debug: (message, meta) => {
+    if (process.env.DEBUG) {
+      // eslint-disable-next-line no-console
+      console.debug(`[${new Date().toISOString()}] [DEBUG] ${message}`, meta ? JSON.stringify(meta) : '');
+    }
+  }
+};
+
 class JobScraperScheduler {
   constructor(configPath = './config.json') {
     this.config = this.loadConfig(configPath);
     this.jobs = [];
+    this.isRunning = false;
+    this.shutdownHandlers = [];
   }
 
   /**
@@ -43,13 +63,17 @@ class JobScraperScheduler {
       throw new Error('Job title is required');
     }
 
-    console.log(`[Scheduler] Adding job: "${jobTitle}" with schedule: ${schedule}`);
+    // Validate cron schedule
+    if (!cron.validate(schedule)) {
+      throw new Error(`Invalid cron schedule: ${schedule}`);
+    }
+
+    logger.info(`[Scheduler] Adding job: "${jobTitle}" with schedule: ${schedule}`);
 
     const task = cron.schedule(
       schedule,
       async () => {
-        console.log(`\n[Scheduler] Running scheduled scrape for: "${jobTitle}"`);
-        console.log(`[Scheduler] Time: ${new Date().toISOString()}`);
+        logger.info(`[Scheduler] Running scheduled scrape for: "${jobTitle}"`);
         
         try {
           const scraper = new LinkedInJobScraper();
@@ -58,9 +82,12 @@ class JobScraperScheduler {
             location,
             maxResults
           });
-          console.log(`[Scheduler] ✓ Completed scrape for: "${jobTitle}"\n`);
+          logger.info(`[Scheduler] Completed scrape for: "${jobTitle}"`);
         } catch (error) {
-          console.error(`[Scheduler] ✗ Failed scrape for: "${jobTitle}":`, error.message);
+          logger.error(`[Scheduler] Failed scrape for: "${jobTitle}"`, { 
+            error: error.message,
+            stack: error.stack 
+          });
         }
       },
       {
@@ -85,34 +112,61 @@ class JobScraperScheduler {
    */
   start() {
     if (!this.config.scheduler.enabled) {
-      console.log('[Scheduler] Scheduler is disabled in config');
+      logger.info('[Scheduler] Scheduler is disabled in config');
       return;
     }
 
     if (this.jobs.length === 0) {
-      console.log('[Scheduler] No jobs configured. Add jobs using addJob()');
+      logger.info('[Scheduler] No jobs configured. Add jobs using addJob()');
       return;
     }
 
-    console.log(`[Scheduler] Starting ${this.jobs.length} scheduled job(s)...`);
+    if (this.isRunning) {
+      logger.info('[Scheduler] Already running');
+      return;
+    }
+
+    this.isRunning = true;
+    logger.info(`[Scheduler] Starting ${this.jobs.length} scheduled job(s)...`);
     
     this.jobs.forEach(({ jobTitle, task }) => {
       task.start();
-      console.log(`[Scheduler] ✓ Started: "${jobTitle}"`);
+      logger.info(`[Scheduler] Started: "${jobTitle}"`);
     });
 
-    console.log('[Scheduler] All jobs started. Waiting for scheduled runs...\n');
+    logger.info('[Scheduler] All jobs started. Waiting for scheduled runs...');
   }
 
   /**
    * Stop all scheduled jobs
    */
   stop() {
-    console.log('[Scheduler] Stopping all scheduled jobs...');
+    if (!this.isRunning) {
+      return;
+    }
+
+    logger.info('[Scheduler] Stopping all scheduled jobs...');
     this.jobs.forEach(({ jobTitle, task }) => {
       task.stop();
-      console.log(`[Scheduler] ✓ Stopped: "${jobTitle}"`);
+      logger.info(`[Scheduler] Stopped: "${jobTitle}"`);
     });
+    this.isRunning = false;
+    
+    // Run any registered shutdown handlers
+    this.shutdownHandlers.forEach(handler => {
+      try {
+        handler();
+      } catch (error) {
+        logger.error('[Scheduler] Shutdown handler failed', { error: error.message });
+      }
+    });
+  }
+
+  /**
+   * Register a handler to run on shutdown
+   */
+  onShutdown(handler) {
+    this.shutdownHandlers.push(handler);
   }
 
   /**
@@ -144,14 +198,38 @@ if (require.main === module) {
   scheduler.start();
 
   // Handle graceful shutdown
-  process.on('SIGINT', () => {
-    console.log('\n[Scheduler] Received SIGINT, stopping...');
+  const gracefulShutdown = (signal) => {
+    logger.info(`[Scheduler] Received ${signal}, shutting down gracefully...`);
     scheduler.stop();
-    process.exit(0);
+    
+    // Give time for cleanup before exiting
+    setTimeout(() => {
+      process.exit(0);
+    }, 1000);
+  };
+
+  process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+  process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+  
+  // Handle uncaught errors
+  process.on('uncaughtException', (error) => {
+    logger.error('[Scheduler] Uncaught exception', { 
+      error: error.message,
+      stack: error.stack 
+    });
+    scheduler.stop();
+    process.exit(1);
   });
 
-  process.on('SIGTERM', () => {
-    console.log('\n[Scheduler] Received SIGTERM, stopping...');
+  process.on('unhandledRejection', (reason, promise) => {
+    logger.error('[Scheduler] Unhandled rejection', { 
+      reason: reason instanceof Error ? reason.message : String(reason) 
+    });
+  });
+
+  // Handle nodemon/HMR restarts
+  process.on('SIGHUP', () => {
+    logger.info('[Scheduler] Received SIGHUP (restart signal)');
     scheduler.stop();
     process.exit(0);
   });

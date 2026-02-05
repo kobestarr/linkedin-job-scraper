@@ -7,6 +7,24 @@
 require('dotenv').config();
 const { ApifyClient } = require('apify-client');
 
+// Simple logger
+const logger = {
+  info: (message, meta) => {
+    // eslint-disable-next-line no-console
+    console.log(`[${new Date().toISOString()}] [INFO] ${message}`, meta ? JSON.stringify(meta) : '');
+  },
+  error: (message, meta) => {
+    // eslint-disable-next-line no-console
+    console.error(`[${new Date().toISOString()}] [ERROR] ${message}`, meta ? JSON.stringify(meta) : '');
+  },
+  debug: (message, meta) => {
+    if (process.env.DEBUG) {
+      // eslint-disable-next-line no-console
+      console.debug(`[${new Date().toISOString()}] [DEBUG] ${message}`, meta ? JSON.stringify(meta) : '');
+    }
+  }
+};
+
 /**
  * Retry a function with exponential backoff
  * @param {Function} fn - Async function to retry
@@ -23,7 +41,7 @@ async function withRetry(fn, maxRetries = 3, baseDelay = 1000) {
       lastError = error;
       if (attempt < maxRetries) {
         const delay = baseDelay * Math.pow(2, attempt);
-        console.log(`[Apify] Attempt ${attempt + 1} failed, retrying in ${delay}ms...`);
+        logger.info(`[Apify] Attempt ${attempt + 1} failed, retrying in ${delay}ms...`);
         await new Promise(resolve => setTimeout(resolve, delay));
       }
     }
@@ -78,8 +96,7 @@ class ApifyJobScraper {
       throw new Error('Job title is required');
     }
 
-    console.log(`[Apify] Starting scrape for: "${jobTitle}" in "${location}"`);
-    console.log(`[Apify] Using actor: ${this.actorId} (cheap_scraper)`);
+    logger.info('[Apify] Starting scrape', { jobTitle, location, actorId: this.actorId });
 
     try {
       // Map parameters to cheap_scraper format
@@ -96,7 +113,7 @@ class ApifyJobScraper {
         actorInput.publishedAt = publishedAt;
       }
 
-      console.log(`[Apify] Actor input:`, JSON.stringify(actorInput, null, 2));
+      logger.debug('[Apify] Actor input', actorInput);
 
       // Run the actor with retry
       const run = await withRetry(
@@ -105,7 +122,7 @@ class ApifyJobScraper {
         2000
       );
 
-      console.log(`[Apify] Run started: ${run.id}`);
+      logger.info('[Apify] Run started', { runId: run.id });
 
       // Wait for the run to finish
       const finishedRun = await this.client.run(run.id).waitForFinish();
@@ -114,7 +131,7 @@ class ApifyJobScraper {
         throw new Error(`Apify run failed with status: ${finishedRun.status}`);
       }
 
-      console.log(`[Apify] Run completed: ${finishedRun.id}`);
+      logger.info('[Apify] Run completed', { runId: finishedRun.id });
 
       // Get the dataset items with retry
       const datasetId = finishedRun.defaultDatasetId;
@@ -124,7 +141,7 @@ class ApifyJobScraper {
         1000
       );
 
-      console.log(`[Apify] Found ${items.length} jobs`);
+      logger.info('[Apify] Jobs retrieved', { count: items.length });
 
       return {
         runId: finishedRun.id,
@@ -133,7 +150,7 @@ class ApifyJobScraper {
         totalCount: items.length
       };
     } catch (error) {
-      console.error('[Apify] Error scraping jobs:', error.message);
+      logger.error('[Apify] Error scraping jobs', { error: error.message });
       throw error;
     }
   }
@@ -152,7 +169,7 @@ class ApifyJobScraper {
       );
       return items;
     } catch (error) {
-      console.error('[Apify] Error getting dataset items:', error.message);
+      logger.error('[Apify] Error getting dataset items', { error: error.message });
       throw error;
     }
   }

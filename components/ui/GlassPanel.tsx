@@ -19,7 +19,7 @@ interface GlassPanelProps extends Omit<HTMLMotionProps<'div'>, 'ref'> {
  * - card: Interactive card with hover lift effect
  */
 export const GlassPanel = forwardRef<HTMLDivElement, GlassPanelProps>(
-  ({ className, variant = 'default', animate = true, delay = 0, children, ...props }, ref) => {
+  ({ className, variant = 'default', animate = true, delay = 0, children, initial, animate: animateProp, transition, ...props }, ref) => {
     const baseClasses = {
       default: 'glass',
       subtle: 'glass-subtle',
@@ -42,9 +42,10 @@ export const GlassPanel = forwardRef<HTMLDivElement, GlassPanelProps>(
 
     return (
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{
+        // Apply user-provided animation props first (as fallbacks), then our defaults
+        initial={initial ?? { opacity: 0, y: 20 }}
+        animate={animateProp ?? { opacity: 1, y: 0 }}
+        transition={transition ?? {
           duration: 0.4,
           delay,
           ease: [0.34, 1.56, 0.64, 1], // Spring-like easing
@@ -67,13 +68,15 @@ export function GlassCard({
   className,
   children,
   onClick,
+  whileHover,
+  whileTap,
   ...props
 }: GlassPanelProps & { onClick?: () => void }) {
   return (
     <motion.div
       className={cn('glass-card cursor-pointer', className)}
-      whileHover={{ scale: 1.01, y: -4 }}
-      whileTap={{ scale: 0.99 }}
+      whileHover={whileHover ?? { scale: 1.01, y: -4 }}
+      whileTap={whileTap ?? { scale: 0.99 }}
       onClick={onClick}
       {...props}
     >

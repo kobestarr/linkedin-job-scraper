@@ -7,6 +7,24 @@ require('dotenv').config();
 const { google } = require('googleapis');
 const fs = require('fs');
 
+// Simple logger
+const logger = {
+  info: (message, meta) => {
+    // eslint-disable-next-line no-console
+    console.log(`[${new Date().toISOString()}] [INFO] ${message}`, meta ? JSON.stringify(meta) : '');
+  },
+  error: (message, meta) => {
+    // eslint-disable-next-line no-console
+    console.error(`[${new Date().toISOString()}] [ERROR] ${message}`, meta ? JSON.stringify(meta) : '');
+  },
+  debug: (message, meta) => {
+    if (process.env.DEBUG) {
+      // eslint-disable-next-line no-console
+      console.debug(`[${new Date().toISOString()}] [DEBUG] ${message}`, meta ? JSON.stringify(meta) : '');
+    }
+  }
+};
+
 /**
  * Retry a function with exponential backoff
  * @param {Function} fn - Async function to retry
@@ -23,7 +41,7 @@ async function withRetry(fn, maxRetries = 3, baseDelay = 1000) {
       lastError = error;
       if (attempt < maxRetries) {
         const delay = baseDelay * Math.pow(2, attempt);
-        console.log(`[Sheets] Attempt ${attempt + 1} failed, retrying in ${delay}ms...`);
+        logger.info(`[Sheets] Attempt ${attempt + 1} failed, retrying in ${delay}ms...`);
         await new Promise(resolve => setTimeout(resolve, delay));
       }
     }
@@ -85,7 +103,7 @@ class GoogleSheetsClient {
 
     this.sheets = google.sheets({ version: 'v4', auth: this.auth });
     
-    console.log('[Sheets] Initialized Google Sheets client');
+    logger.info('[Sheets] Initialized Google Sheets client');
   }
 
   /**
@@ -118,13 +136,13 @@ class GoogleSheetsClient {
             }
           })
         );
-        console.log(`[Sheets] Created sheet: ${this.sheetName}`);
+        logger.info('[Sheets] Created sheet', { sheetName: this.sheetName });
       }
 
       // Set headers if sheet is empty
       await this.setHeadersIfNeeded();
     } catch (error) {
-      console.error('[Sheets] Error ensuring sheet exists:', error.message);
+      logger.error('[Sheets] Error ensuring sheet exists', { error: error.message });
       throw error;
     }
   }
@@ -170,10 +188,10 @@ class GoogleSheetsClient {
           })
         );
 
-        console.log('[Sheets] Set headers');
+        logger.info('[Sheets] Set headers');
       }
     } catch (error) {
-      console.error('[Sheets] Error setting headers:', error.message);
+      logger.error('[Sheets] Error setting headers', { error: error.message });
       throw error;
     }
   }
@@ -204,10 +222,13 @@ class GoogleSheetsClient {
         }
       }
 
-      console.log(`[Sheets] Found ${companies.size} existing companies (checked up to ${maxRows} rows)`);
+      logger.info('[Sheets] Retrieved existing companies', { 
+        count: companies.size, 
+        maxRowsChecked: maxRows 
+      });
       return companies;
     } catch (error) {
-      console.error('[Sheets] Error getting existing companies:', error.message);
+      logger.error('[Sheets] Error getting existing companies', { error: error.message });
       // Return empty set if error (will append all jobs)
       return new Set();
     }
@@ -224,7 +245,7 @@ class GoogleSheetsClient {
     }
 
     if (!Array.isArray(jobs) || jobs.length === 0) {
-      console.log('[Sheets] No jobs to append');
+      logger.info('[Sheets] No jobs to append');
       return { appended: 0, skipped: 0 };
     }
 
@@ -238,7 +259,7 @@ class GoogleSheetsClient {
     });
 
     if (newJobs.length === 0) {
-      console.log('[Sheets] All jobs are duplicates, nothing to append');
+      logger.info('[Sheets] All jobs are duplicates, nothing to append');
       return { appended: 0, skipped: jobs.length };
     }
 
@@ -271,14 +292,17 @@ class GoogleSheetsClient {
         })
       );
 
-      console.log(`[Sheets] Appended ${newJobs.length} jobs (skipped ${jobs.length - newJobs.length} duplicates)`);
+      logger.info('[Sheets] Jobs appended', { 
+        appended: newJobs.length, 
+        skipped: jobs.length - newJobs.length 
+      });
       
       return {
         appended: newJobs.length,
         skipped: jobs.length - newJobs.length
       };
     } catch (error) {
-      console.error('[Sheets] Error appending jobs:', error.message);
+      logger.error('[Sheets] Error appending jobs', { error: error.message });
       throw error;
     }
   }

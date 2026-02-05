@@ -106,7 +106,7 @@ export type DateRange = '24h' | '3d' | '7d' | '14d' | '30d';
 export const DATE_RANGE_CONFIG: Record<DateRange, { label: string; tooltip: string; emoji?: string }> = {
   '24h': {
     label: 'Last 24 hours',
-    tooltip: 'Posted today. Highest intent—they're actively reviewing candidates right now.',
+    tooltip: 'Posted today. Highest intent - they are actively reviewing candidates right now.',
     emoji: '🔥',
   },
   '3d': {

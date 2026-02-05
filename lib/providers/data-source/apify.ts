@@ -7,10 +7,7 @@
 
 import type { Job, JobFilters } from '@/types';
 import type { DataSourceProvider, ScrapeOptions, ScrapeResult } from './types';
-
-// In-memory cache for jobs (MVP - will move to proper storage in Phase 2)
-let jobCache: Job[] = [];
-let lastUpdated: Date | null = null;
+import { logger } from '@/lib/logger';
 
 export class ApifyDataSource implements DataSourceProvider {
   readonly id = 'apify';
@@ -18,18 +15,27 @@ export class ApifyDataSource implements DataSourceProvider {
 
   private apiToken: string | undefined;
   private actorId: string;
+  
+  // Instance-level cache (not module-level to avoid cross-request pollution)
+  private jobCache: Job[] = [];
+  private lastUpdated: Date | null = null;
 
   constructor() {
     this.apiToken = process.env.APIFY_API_TOKEN;
     this.actorId = process.env.APIFY_ACTOR_ID || '2rJKkhh7vjpX7pvjg';
   }
 
-  async scrape(options: ScrapeOptions): Promise<ScrapeResult> {
+  async scrape(options: ScrapeOptions, signal?: AbortSignal): Promise<ScrapeResult> {
     if (!this.apiToken) {
       throw new Error('APIFY_API_TOKEN not configured');
     }
 
     const { jobTitle, location = 'United States', dateRange = 'last24hours', maxResults = 50 } = options;
+
+    // Check for abort before starting
+    if (signal?.aborted) {
+      throw new Error('Scrape aborted by user');
+    }
 
     // Map date range to Apify format
     const publishedAt = this.mapDateRange(dateRange);
@@ -42,41 +48,57 @@ export class ApifyDataSource implements DataSourceProvider {
       ...(publishedAt && { publishedAt }),
     };
 
-    // Call Apify API
-    const response = await fetch(`https://api.apify.com/v2/acts/${this.actorId}/runs`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${this.apiToken}`,
-      },
-      body: JSON.stringify(actorInput),
-    });
+    logger.info('[Apify] Starting scrape', { jobTitle, location, dateRange });
 
-    if (!response.ok) {
-      throw new Error(`Apify API error: ${response.statusText}`);
+    try {
+      // Call Apify API
+      const response = await fetch(`https://api.apify.com/v2/acts/${this.actorId}/runs`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${this.apiToken}`,
+        },
+        body: JSON.stringify(actorInput),
+        signal,
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => 'Unknown error');
+        throw new Error(`Apify API error: ${response.status} ${response.statusText} - ${errorText}`);
+      }
+
+      const run = await response.json();
+      logger.info('[Apify] Run started', { runId: run.data?.id });
+
+      // Wait for run to complete (polling)
+      const completedRun = await this.waitForRun(run.data.id, signal);
+
+      // Fetch results from dataset
+      const jobs = await this.fetchDataset(completedRun.defaultDatasetId, signal);
+
+      // Update instance cache
+      this.jobCache = jobs;
+      this.lastUpdated = new Date();
+
+      logger.info('[Apify] Scrape completed', { totalJobs: jobs.length });
+
+      return {
+        runId: completedRun.id,
+        jobs,
+        totalCount: jobs.length,
+      };
+    } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        logger.info('[Apify] Scrape aborted');
+        throw new Error('Scrape aborted by user');
+      }
+      logger.error('[Apify] Scrape failed', { error: error instanceof Error ? error.message : 'Unknown error' });
+      throw error;
     }
-
-    const run = await response.json();
-
-    // Wait for run to complete (polling)
-    const completedRun = await this.waitForRun(run.data.id);
-
-    // Fetch results from dataset
-    const jobs = await this.fetchDataset(completedRun.defaultDatasetId);
-
-    // Update cache
-    jobCache = jobs;
-    lastUpdated = new Date();
-
-    return {
-      runId: completedRun.id,
-      jobs,
-      totalCount: jobs.length,
-    };
   }
 
   async getJobs(filters?: JobFilters): Promise<Job[]> {
-    let jobs = [...jobCache];
+    let jobs = [...this.jobCache];
 
     if (!filters) return jobs;
 
@@ -121,7 +143,7 @@ export class ApifyDataSource implements DataSourceProvider {
   }
 
   async getLastUpdated(): Promise<Date | null> {
-    return lastUpdated;
+    return this.lastUpdated;
   }
 
   async isConfigured(): Promise<boolean> {
@@ -157,51 +179,103 @@ export class ApifyDataSource implements DataSourceProvider {
     return new Date(now.getTime() - hoursAgo * 60 * 60 * 1000);
   }
 
-  private async waitForRun(runId: string, maxWaitMs = 300000): Promise<{ id: string; defaultDatasetId: string }> {
+  private async waitForRun(
+    runId: string, 
+    signal?: AbortSignal, 
+    maxWaitMs = 300000,
+    pollIntervalMs = 2000
+  ): Promise<{ id: string; defaultDatasetId: string }> {
     const startTime = Date.now();
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
-    while (Date.now() - startTime < maxWaitMs) {
-      const response = await fetch(`https://api.apify.com/v2/actor-runs/${runId}`, {
-        headers: { Authorization: `Bearer ${this.apiToken}` },
-      });
+    try {
+      while (Date.now() - startTime < maxWaitMs) {
+        // Check for abort signal
+        if (signal?.aborted) {
+          throw new Error('Scrape aborted by user');
+        }
 
-      if (!response.ok) {
-        throw new Error(`Failed to check run status: ${response.statusText}`);
+        const response = await fetch(`https://api.apify.com/v2/actor-runs/${runId}`, {
+          headers: { Authorization: `Bearer ${this.apiToken}` },
+          signal,
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text().catch(() => 'Unknown error');
+          throw new Error(`Failed to check run status: ${response.status} ${response.statusText} - ${errorText}`);
+        }
+
+        const { data } = await response.json();
+
+        if (data.status === 'SUCCEEDED') {
+          return data;
+        }
+
+        if (data.status === 'FAILED' || data.status === 'ABORTED' || data.status === 'TIMED-OUT') {
+          throw new Error(`Apify run ${data.status}${data.statusMessage ? `: ${data.statusMessage}` : ''}`);
+        }
+
+        // Wait before polling again (with abort support)
+        await new Promise<void>((resolve, reject) => {
+          if (signal?.aborted) {
+            reject(new Error('Scrape aborted by user'));
+            return;
+          }
+
+          timeoutId = setTimeout(() => {
+            if (signal?.aborted) {
+              reject(new Error('Scrape aborted by user'));
+            } else {
+              resolve();
+            }
+          }, pollIntervalMs);
+
+          signal?.addEventListener('abort', () => {
+            if (timeoutId) {
+              clearTimeout(timeoutId);
+              reject(new Error('Scrape aborted by user'));
+            }
+          }, { once: true });
+        });
       }
 
-      const { data } = await response.json();
-
-      if (data.status === 'SUCCEEDED') {
-        return data;
+      throw new Error(`Apify run timed out after ${maxWaitMs}ms`);
+    } finally {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
       }
-
-      if (data.status === 'FAILED' || data.status === 'ABORTED') {
-        throw new Error(`Apify run ${data.status}`);
-      }
-
-      // Wait 2 seconds before polling again
-      await new Promise((resolve) => setTimeout(resolve, 2000));
     }
-
-    throw new Error('Apify run timed out');
   }
 
-  private async fetchDataset(datasetId: string): Promise<Job[]> {
-    const response = await fetch(
-      `https://api.apify.com/v2/datasets/${datasetId}/items?format=json`,
-      {
-        headers: { Authorization: `Bearer ${this.apiToken}` },
+  private async fetchDataset(datasetId: string, signal?: AbortSignal): Promise<Job[]> {
+    try {
+      const response = await fetch(
+        `https://api.apify.com/v2/datasets/${datasetId}/items?format=json`,
+        {
+          headers: { Authorization: `Bearer ${this.apiToken}` },
+          signal,
+        }
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => 'Unknown error');
+        throw new Error(`Failed to fetch dataset: ${response.status} ${response.statusText} - ${errorText}`);
       }
-    );
 
-    if (!response.ok) {
-      throw new Error(`Failed to fetch dataset: ${response.statusText}`);
+      const items = await response.json();
+
+      if (!Array.isArray(items)) {
+        throw new Error('Invalid dataset response: expected array');
+      }
+
+      // Transform Apify format to our Job type
+      return items.map((item: Record<string, unknown>) => this.transformJob(item));
+    } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new Error('Dataset fetch aborted');
+      }
+      throw error;
     }
-
-    const items = await response.json();
-
-    // Transform Apify format to our Job type
-    return items.map((item: Record<string, unknown>) => this.transformJob(item));
   }
 
   private transformJob(item: Record<string, unknown>): Job {

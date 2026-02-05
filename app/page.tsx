@@ -19,8 +19,9 @@ export default function DashboardPage() {
   const [searchQuery, setSearchQuery] = useState('');
 
   const handleSearch = () => {
-    console.log('Search triggered:', searchQuery);
-    // Full implementation in Slice 3-4
+    // TODO: Implement search functionality in Slice 3-4
+    // eslint-disable-next-line no-console
+    console.info('[Dashboard] Search initiated:', { query: searchQuery });
   };
 
   return (
