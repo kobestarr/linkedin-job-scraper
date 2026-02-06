@@ -44,7 +44,7 @@ export function getClientConfig(): ClientConfig {
     defaults: {
       jobTitle: getEnv('NEXT_PUBLIC_DEFAULT_JOB_TITLE', '') || undefined,
       location: getEnv('NEXT_PUBLIC_DEFAULT_LOCATION', '') || undefined,
-      maxResults: parseInt(getEnv('NEXT_PUBLIC_DEFAULT_MAX_RESULTS', '50'), 10),
+      maxResults: parseInt(getEnv('NEXT_PUBLIC_DEFAULT_MAX_RESULTS', '150'), 10),
     },
   };
 }

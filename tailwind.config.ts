@@ -56,6 +56,8 @@ const config: Config = {
         'fade-in': 'fadeIn 0.3s ease-out forwards',
         'slide-up': 'slideUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards',
         shimmer: 'shimmer 2s linear infinite',
+        'pulse-dot': 'pulseDot 2s ease-in-out infinite',
+        'filter-in': 'filterIn 0.2s ease-out forwards',
       },
       keyframes: {
         logoEntrance: {
@@ -84,6 +86,14 @@ const config: Config = {
         shimmer: {
           '0%': { backgroundPosition: '-200% 0' },
           '100%': { backgroundPosition: '200% 0' },
+        },
+        pulseDot: {
+          '0%, 100%': { opacity: '0.4', transform: 'scale(0.8)' },
+          '50%': { opacity: '1', transform: 'scale(1)' },
+        },
+        filterIn: {
+          '0%': { opacity: '0', transform: 'scale(0.95) translateY(-4px)' },
+          '100%': { opacity: '1', transform: 'scale(1) translateY(0)' },
         },
       },
     },

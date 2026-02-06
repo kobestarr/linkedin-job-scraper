@@ -98,6 +98,10 @@ export function JobCard({ job, index = 0 }: JobCardProps) {
             {job.salary && (
               <span className="text-primary-400">{job.salary}</span>
             )}
+            {/* Repeat hiring badge */}
+            {job.isRepeatHiring && (
+              <span className="badge-repeat-hiring">Repeat Hiring</span>
+            )}
           </div>
 
           {/* Applicant count */}

@@ -12,6 +12,10 @@ export interface ScrapeOptions {
   location?: string;
   dateRange?: string;
   maxResults?: number;
+  // Post-processing filters (not sent to Apify)
+  companySizes?: string[];
+  excludeRecruiters?: boolean;
+  excludeCompanies?: string[];
 }
 
 export interface ScrapeResult {

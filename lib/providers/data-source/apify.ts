@@ -30,7 +30,7 @@ export class ApifyDataSource implements DataSourceProvider {
       throw new Error('APIFY_API_TOKEN not configured');
     }
 
-    const { jobTitle, location = 'United States', dateRange = 'last24hours', maxResults = 50 } = options;
+    const { jobTitle, location = 'United States', dateRange = 'last24hours', maxResults = 150 } = options;
 
     // Check for abort before starting
     if (signal?.aborted) {
@@ -40,10 +40,11 @@ export class ApifyDataSource implements DataSourceProvider {
     // Map date range to Apify format
     const publishedAt = this.mapDateRange(dateRange);
 
+    // Apify cheap_scraper requires maxItems >= 150
     const actorInput = {
       keyword: [jobTitle],
       location,
-      maxItems: maxResults,
+      maxItems: Math.max(maxResults, 150),
       saveOnlyUniqueItems: true,
       ...(publishedAt && { publishedAt }),
     };
@@ -278,6 +279,22 @@ export class ApifyDataSource implements DataSourceProvider {
     }
   }
 
+  /**
+   * Strip tracking parameters from LinkedIn URLs to avoid authwall redirects.
+   * LinkedIn adds trackingId, refId, etc. that fingerprint the request source.
+   */
+  private cleanLinkedInUrl(url: string): string {
+    try {
+      const parsed = new URL(url);
+      if (parsed.hostname.includes('linkedin.com')) {
+        return `${parsed.origin}${parsed.pathname}`;
+      }
+      return url;
+    } catch {
+      return url;
+    }
+  }
+
   private transformJob(item: Record<string, unknown>): Job {
     return {
       id: (item.id as string) || `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -287,7 +304,7 @@ export class ApifyDataSource implements DataSourceProvider {
       companyLinkedIn: item.companyLinkedIn as string | undefined,
       location: (item.location as string) || 'Unknown Location',
       postedAt: (item.postedAt as string) || (item.publishedAt as string) || new Date().toISOString(),
-      url: (item.url as string) || (item.jobUrl as string) || '#',
+      url: this.cleanLinkedInUrl((item.url as string) || (item.jobUrl as string) || '#'),
       description: item.description as string | undefined,
       salary: item.salary as string | undefined,
       employmentType: item.employmentType as string | undefined,

@@ -177,6 +177,63 @@ body::before {
   .filter-pill:hover {
     background: rgba(var(--color-primary), 0.30);
   }
+
+  /* Glass dropdown panel — fully opaque dark background for readability */
+  .dropdown-glass {
+    @apply p-2;
+    background: rgb(var(--color-surface-elevated));
+    border: 1px solid rgba(var(--color-glass-border), 0.15);
+    border-radius: 16px;
+    min-width: 200px;
+    max-height: 300px;
+    overflow-y: auto;
+    box-shadow:
+      0 16px 48px rgba(0, 0, 0, 0.7),
+      0 4px 16px rgba(0, 0, 0, 0.5),
+      inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+  }
+
+  /* Dropdown option */
+  .dropdown-option {
+    @apply px-3 py-2 rounded-xl text-sm text-white/70 cursor-pointer transition-all duration-150;
+  }
+
+  .dropdown-option:hover {
+    background: rgba(var(--color-glass), 0.15);
+    color: rgb(var(--color-text-primary));
+  }
+
+  .dropdown-option[data-selected="true"] {
+    background: rgba(var(--color-primary), 0.15);
+    color: rgb(var(--color-primary-300));
+  }
+
+  /* Badge styles */
+  .badge-repeat-hiring {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium;
+    background: rgba(245, 158, 11, 0.15);
+    color: rgb(252, 211, 77);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+  }
+
+  .badge-recruiter {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium;
+    background: rgba(239, 68, 68, 0.1);
+    color: rgb(252, 165, 165);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+  }
+
+  /* Card grid for card view */
+  .job-card-grid {
+    @apply grid gap-4;
+    grid-template-columns: 1fr;
+  }
+
+  @media (min-width: 768px) {
+    .job-card-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
 }
 
 /* Scrollbar styling */

@@ -29,7 +29,10 @@ export async function POST(request: NextRequest) {
       jobTitle: body.jobTitle.trim(),
       location: body.location,
       dateRange: body.dateRange,
-      maxResults: body.maxResults ?? 50,
+      maxResults: body.maxResults ?? 150,
+      companySizes: body.companySizes,
+      excludeRecruiters: body.excludeRecruiters,
+      excludeCompanies: body.excludeCompanies,
     };
 
     const result = await dataSource.scrape(options);
