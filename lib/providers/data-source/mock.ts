@@ -71,16 +71,6 @@ export class MockDataSource implements DataSourceProvider {
 
     if (!filters) return jobs;
 
-    if (filters.mustContain?.length) {
-      jobs = jobs.filter((job) =>
-        filters.mustContain!.some(
-          (keyword) =>
-            job.title.toLowerCase().includes(keyword.toLowerCase()) ||
-            job.description?.toLowerCase().includes(keyword.toLowerCase())
-        )
-      );
-    }
-
     if (filters.exclude?.length) {
       jobs = jobs.filter(
         (job) =>

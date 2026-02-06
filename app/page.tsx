@@ -1,15 +1,20 @@
 'use client';
 
+import { AnimatePresence } from 'framer-motion';
 import { LogoHeader } from '@/components/dashboard/LogoHeader';
 import { EmptyState } from '@/components/dashboard/EmptyState';
 import { ErrorState } from '@/components/dashboard/ErrorState';
 import { JobList } from '@/components/dashboard/JobList';
 import { SearchResultsHeader } from '@/components/dashboard/SearchResultsHeader';
+import { SearchLoadingState } from '@/components/dashboard/SearchLoadingState';
+import { JobDetailPanel } from '@/components/dashboard/JobDetailPanel';
+import { SelectionBar } from '@/components/dashboard/SelectionBar';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { LocationFilter } from '@/components/filters/LocationFilter';
 import { DateRangeFilter } from '@/components/filters/DateRangeFilter';
 import { CompanySizeFilter } from '@/components/filters/CompanySizeFilter';
 import { ExcludeRecruitersToggle } from '@/components/filters/ExcludeRecruitersToggle';
+import { MatchModeFilter } from '@/components/filters/MatchModeFilter';
 import { SeniorityFilter } from '@/components/filters/SeniorityFilter';
 import { EmploymentTypeFilter } from '@/components/filters/EmploymentTypeFilter';
 import { PayFilter } from '@/components/filters/PayFilter';
@@ -21,7 +26,7 @@ import { getClientConfig } from '@/lib/config/client';
 /**
  * Main Dashboard Page
  *
- * Slice 4: Full MVP Demo with filters, views, and pipeline
+ * Slice 5: UX Polish, Detail Panel, Sorting & Selection
  */
 export default function DashboardPage() {
   const config = getClientConfig();
@@ -34,8 +39,10 @@ export default function DashboardPage() {
   const excludeRecruiters = useFilterStore((s) => s.excludeRecruiters);
   const excludeCompanies = useFilterStore((s) => s.excludeCompanies);
   const viewMode = useFilterStore((s) => s.viewMode);
+  const selectedJobId = useFilterStore((s) => s.selectedJobId);
+  const setSelectedJobId = useFilterStore((s) => s.setSelectedJobId);
 
-  const { jobs, isLoading, isRefreshing, isError, error, search, lastSearch, reset } =
+  const { jobs, isLoading, isRefreshing, isError, error, search, lastSearch, reset, streamProgress } =
     useJobSearch();
 
   const handleSearch = () => {
@@ -50,9 +57,11 @@ export default function DashboardPage() {
     });
   };
 
+  const selectedJob = jobs.find((j) => j.id === selectedJobId) || null;
   const hasSearched = lastSearch !== null;
+  const isStreaming = isLoading && jobs.length > 0;
   const showEmptyState = !isLoading && !isError && jobs.length === 0;
-  const showResults = !isLoading && !isError && jobs.length > 0;
+  const showResults = jobs.length > 0;
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -96,6 +105,7 @@ export default function DashboardPage() {
                 <EmploymentTypeFilter />
                 <PayFilter />
                 <ExcludeRecruitersToggle />
+                <MatchModeFilter />
               </div>
 
               {/* Row 3: Active filter pills */}
@@ -106,16 +116,45 @@ export default function DashboardPage() {
           {/* Results section */}
           <div className="space-y-3 sm:space-y-4">
             {/* Results header */}
-            <SearchResultsHeader
-              count={jobs.length}
-              searchQuery={lastSearch?.query || ''}
-              lastUpdated={lastSearch?.timestamp}
-              isLoading={isLoading}
-              isRefreshing={isRefreshing}
-            />
+            {(hasSearched || isLoading) && (
+              <SearchResultsHeader
+                count={jobs.length}
+                searchQuery={lastSearch?.query || ''}
+                lastUpdated={lastSearch?.timestamp}
+                isLoading={isLoading}
+                isRefreshing={isRefreshing}
+              />
+            )}
 
-            {/* Loading state */}
-            {isLoading && <JobList jobs={[]} isLoading={true} viewMode={viewMode} />}
+            {/* Loading state — full radar when no results yet */}
+            {isLoading && jobs.length === 0 && (
+              <SearchLoadingState
+                foundCount={streamProgress?.found ?? 0}
+                statusMessage={streamProgress?.status}
+                messages={config.loading.messages}
+                leftLabel={config.loading.leftLabel}
+                rightLabel={config.loading.rightLabel}
+              />
+            )}
+
+            {/* Streaming indicator — compact bar when results are arriving */}
+            {isStreaming && (
+              <div className="flex items-center gap-3 px-4 py-2.5 glass-subtle">
+                <div className="w-2 h-2 rounded-full bg-primary-400 animate-pulse" />
+                <span className="text-sm text-white/60">
+                  {streamProgress?.found ?? jobs.length} jobs found — still scanning...
+                </span>
+                <div className="flex-1 h-0.5 bg-white/[0.06] rounded-full overflow-hidden">
+                  <div
+                    className="h-full rounded-full animate-pulse"
+                    style={{
+                      width: '60%',
+                      background: 'linear-gradient(90deg, transparent, rgb(var(--color-primary-400)), transparent)',
+                    }}
+                  />
+                </div>
+              </div>
+            )}
 
             {/* Error state */}
             {isError && error && (
@@ -143,11 +182,32 @@ export default function DashboardPage() {
               />
             )}
 
-            {/* Results */}
-            {showResults && <JobList jobs={jobs} isLoading={false} viewMode={viewMode} />}
+            {/* Results — show as soon as jobs start arriving */}
+            {showResults && (
+              <JobList
+                jobs={jobs}
+                isLoading={false}
+                viewMode={viewMode}
+                selectedJobId={selectedJobId}
+                onSelectJob={setSelectedJobId}
+              />
+            )}
           </div>
         </div>
       </main>
+
+      {/* Job Detail Panel */}
+      <AnimatePresence>
+        {selectedJob && (
+          <JobDetailPanel
+            job={selectedJob}
+            onClose={() => setSelectedJobId(null)}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Selection Bar */}
+      <SelectionBar totalCount={jobs.length} allJobIds={jobs.map((j) => j.id)} />
 
       {/* Footer */}
       <footer className="py-3 sm:py-4 text-center">

@@ -24,6 +24,10 @@ const nextConfig = {
         protocol: 'https',
         hostname: '**.licdn.com',
       },
+      {
+        protocol: 'https',
+        hostname: 'ui-avatars.com',
+      },
     ],
   },
 };

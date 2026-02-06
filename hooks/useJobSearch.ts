@@ -1,13 +1,13 @@
 'use client';
 
 import { useState, useCallback, useRef, useMemo, useEffect } from 'react';
-import { useMutation } from '@tanstack/react-query';
 import type { Job } from '@/types';
 import { AUTO_REFRESH_CONFIG } from '@/types';
-import type { ScrapeOptions, ScrapeResult } from '@/lib/providers/data-source/types';
+import type { ScrapeOptions } from '@/lib/providers/data-source/types';
 import { postProcessJobs, applyClientFilters, applySorting } from '@/lib/pipeline/post-process';
 import { useFilterStore } from '@/stores/useFilterStore';
 import { useJobCache } from '@/hooks/useJobCache';
+import { transformApifyJob } from '@/lib/utils/transform-job';
 
 export interface UseJobSearchReturn {
   jobs: Job[];
@@ -20,26 +20,11 @@ export interface UseJobSearchReturn {
   cancel: () => void;
   reset: () => void;
   lastSearch: { query: string; timestamp: Date } | null;
+  streamProgress: { found: number; status: string } | null;
 }
 
-async function searchJobs(
-  options: ScrapeOptions,
-  signal?: AbortSignal
-): Promise<ScrapeResult> {
-  const response = await fetch('/api/jobs/scrape', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(options),
-    signal,
-  });
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.error || `Search failed: ${response.status}`);
-  }
-
-  return response.json();
-}
+const POLL_INTERVAL = 3000;
+const MAX_POLL_RETRIES = 3;
 
 export function useJobSearch(): UseJobSearchReturn {
   const { getCachedResults, setCachedResults } = useJobCache();
@@ -48,9 +33,8 @@ export function useJobSearch(): UseJobSearchReturn {
   const companySizes = useFilterStore((s) => s.companySizes);
   const autoRefreshInterval = useFilterStore((s) => s.autoRefreshInterval);
   const sortBy = useFilterStore((s) => s.sortBy);
-  const mustContainKeywords = useFilterStore((s) => s.mustContainKeywords);
+  const matchMode = useFilterStore((s) => s.matchMode);
 
-  // Initialize from cache
   const [rawJobs, setRawJobs] = useState<Job[]>(() => {
     const cached = getCachedResults();
     return cached?.jobs || [];
@@ -59,45 +43,34 @@ export function useJobSearch(): UseJobSearchReturn {
     const cached = getCachedResults();
     return cached ? { query: cached.query, timestamp: new Date(cached.timestamp) } : null;
   });
+  const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const abortControllerRef = useRef<AbortController | null>(null);
+  const [error, setError] = useState<Error | null>(null);
+  const [streamProgress, setStreamProgress] = useState<{ found: number; status: string } | null>(null);
+
+  const abortRef = useRef(false);
+  const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastOptionsRef = useRef<ScrapeOptions | null>(null);
 
-  // Collect existing dedupeKeys for repeat hiring detection
   const existingDedupeKeys = useMemo(() => {
     return new Set(rawJobs.map((j) => j.dedupeKey).filter(Boolean) as string[]);
   }, [rawJobs]);
 
-  const searchMutation = useMutation({
-    mutationFn: async (options: ScrapeOptions) => {
-      abortControllerRef.current?.abort();
-      abortControllerRef.current = new AbortController();
-      return searchJobs(options, abortControllerRef.current.signal);
-    },
-    onSuccess: (result, variables) => {
-      const processed = postProcessJobs(result.jobs, {
-        excludeRecruiters: false,
-        excludeCompanies: [],
-        companySizes: [],
-        existingDedupeKeys,
-      });
-
-      setRawJobs(processed);
-      setLastSearch({ query: variables.jobTitle, timestamp: new Date() });
-      setIsRefreshing(false);
-      setCachedResults(processed, variables.jobTitle);
-    },
-    onError: (error) => {
-      setIsRefreshing(false);
-      if (error instanceof Error && error.name === 'AbortError') {
-        return;
-      }
-    },
-  });
+  const stopPolling = useCallback(() => {
+    abortRef.current = true;
+    if (pollTimerRef.current) {
+      clearTimeout(pollTimerRef.current);
+      pollTimerRef.current = null;
+    }
+  }, []);
 
   const search = useCallback(
-    (query: string, options?: Partial<Omit<ScrapeOptions, 'jobTitle'>>) => {
+    async (query: string, options?: Partial<Omit<ScrapeOptions, 'jobTitle'>>) => {
       if (!query.trim()) return;
+
+      // Stop any existing polling
+      stopPolling();
+      abortRef.current = false;
 
       const scrapeOptions: ScrapeOptions = {
         jobTitle: query.trim(),
@@ -110,22 +83,133 @@ export function useJobSearch(): UseJobSearchReturn {
       };
 
       lastOptionsRef.current = scrapeOptions;
-      searchMutation.mutate(scrapeOptions);
+      setIsLoading(true);
+      setError(null);
+      setRawJobs([]);
+      setStreamProgress({ found: 0, status: 'Starting search...' });
+      setLastSearch({ query: query.trim(), timestamp: new Date() });
+
+      try {
+        // Phase 1: Start the run
+        const startRes = await fetch('/api/jobs/scrape', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...scrapeOptions, action: 'start' }),
+        });
+
+        if (!startRes.ok) {
+          const errData = await startRes.json().catch(() => ({}));
+          throw new Error(errData.error || `Search failed: ${startRes.status}`);
+        }
+
+        const { runId, datasetId } = await startRes.json();
+
+        if (abortRef.current) return;
+
+        // Phase 2: Poll for results
+        let offset = 0;
+        let allJobs: Job[] = [];
+        let consecutiveErrors = 0;
+
+        const poll = async () => {
+          if (abortRef.current) return;
+
+          try {
+            const pollRes = await fetch('/api/jobs/scrape', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ action: 'poll', runId, datasetId, offset }),
+            });
+
+            if (!pollRes.ok) {
+              // Retry on transient errors instead of failing immediately
+              consecutiveErrors++;
+              if (consecutiveErrors <= MAX_POLL_RETRIES) {
+                setStreamProgress({
+                  found: allJobs.length,
+                  status: `Reconnecting... (attempt ${consecutiveErrors}/${MAX_POLL_RETRIES})`,
+                });
+                pollTimerRef.current = setTimeout(poll, POLL_INTERVAL * 2);
+                return;
+              }
+              throw new Error(`Search failed after ${MAX_POLL_RETRIES} retries (status: ${pollRes.status})`);
+            }
+
+            // Reset error count on success
+            consecutiveErrors = 0;
+
+            const data = await pollRes.json();
+
+            if (abortRef.current) return;
+
+            // Transform and append new jobs
+            if (data.newCount > 0) {
+              const newJobs = data.jobs.map((item: Record<string, unknown>) => transformApifyJob(item));
+              const processed = postProcessJobs(newJobs, {
+                excludeRecruiters: false,
+                excludeCompanies: [],
+                companySizes: [],
+                existingDedupeKeys,
+              });
+              allJobs = [...allJobs, ...processed];
+              offset = data.offset;
+
+              setRawJobs([...allJobs]);
+              setStreamProgress({ found: allJobs.length, status: 'Scanning LinkedIn...' });
+            }
+
+            // Check if done
+            if (data.status === 'SUCCEEDED') {
+              setIsLoading(false);
+              setIsRefreshing(false);
+              setStreamProgress(null);
+              setCachedResults(allJobs, query.trim());
+              return;
+            }
+
+            if (data.status === 'FAILED') {
+              throw new Error('Apify run failed');
+            }
+
+            // Continue polling
+            pollTimerRef.current = setTimeout(poll, POLL_INTERVAL);
+          } catch (err) {
+            if (!abortRef.current) {
+              setError(err instanceof Error ? err : new Error('Unknown error'));
+              setIsLoading(false);
+              setStreamProgress(null);
+            }
+          }
+        };
+
+        // Start first poll after a short delay
+        pollTimerRef.current = setTimeout(poll, 3000);
+      } catch (err) {
+        if (!abortRef.current) {
+          setError(err instanceof Error ? err : new Error('Unknown error'));
+          setIsLoading(false);
+          setStreamProgress(null);
+        }
+      }
     },
-    [searchMutation]
+    [stopPolling, existingDedupeKeys, setCachedResults]
   );
 
   const cancel = useCallback(() => {
-    abortControllerRef.current?.abort();
-    searchMutation.reset();
+    stopPolling();
+    setIsLoading(false);
     setIsRefreshing(false);
-  }, [searchMutation]);
+    setStreamProgress(null);
+  }, [stopPolling]);
 
   const reset = useCallback(() => {
+    stopPolling();
     setRawJobs([]);
     setLastSearch(null);
-    searchMutation.reset();
-  }, [searchMutation]);
+    setIsLoading(false);
+    setError(null);
+    setStreamProgress(null);
+  }, [stopPolling]);
 
   // Auto-refresh timer
   useEffect(() => {
@@ -134,11 +218,17 @@ export function useJobSearch(): UseJobSearchReturn {
 
     const timer = setInterval(() => {
       setIsRefreshing(true);
-      searchMutation.mutate(lastOptionsRef.current!);
+      const opts = lastOptionsRef.current!;
+      search(opts.jobTitle, opts);
     }, config.ms);
 
     return () => clearInterval(timer);
-  }, [autoRefreshInterval, lastSearch, searchMutation]);
+  }, [autoRefreshInterval, lastSearch, search]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => stopPolling();
+  }, [stopPolling]);
 
   // Derive display jobs: filter then sort
   const jobs = useMemo(() => {
@@ -146,22 +236,23 @@ export function useJobSearch(): UseJobSearchReturn {
       excludeRecruiters,
       excludeCompanies,
       companySizes,
-      mustContainKeywords,
+      matchMode,
       searchQuery: lastSearch?.query,
     });
     return applySorting(filtered, sortBy, lastSearch?.query);
-  }, [rawJobs, excludeRecruiters, excludeCompanies, companySizes, mustContainKeywords, sortBy, lastSearch?.query]);
+  }, [rawJobs, excludeRecruiters, excludeCompanies, companySizes, matchMode, sortBy, lastSearch?.query]);
 
   return {
     jobs,
     rawJobs,
-    isLoading: searchMutation.isPending && !isRefreshing,
+    isLoading,
     isRefreshing,
-    isError: searchMutation.isError,
-    error: searchMutation.error as Error | null,
+    isError: !!error,
+    error,
     search,
     cancel,
     reset,
     lastSearch,
+    streamProgress,
   };
 }

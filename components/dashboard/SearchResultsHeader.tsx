@@ -3,6 +3,7 @@
 import { formatRelativeTime } from '@/lib/utils';
 import { ViewToggle } from './ViewToggle';
 import { AutoRefreshSelector } from '@/components/filters/AutoRefreshSelector';
+import { SortDropdown } from '@/components/filters/SortDropdown';
 
 interface SearchResultsHeaderProps {
   count: number;
@@ -39,7 +40,8 @@ export function SearchResultsHeader({
           </p>
         )}
       </div>
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 sm:gap-3">
+        <SortDropdown />
         <AutoRefreshSelector />
         <ViewToggle />
         <div className="text-right">

@@ -104,16 +104,6 @@ export class ApifyDataSource implements DataSourceProvider {
     if (!filters) return jobs;
 
     // Apply filters
-    if (filters.mustContain?.length) {
-      jobs = jobs.filter((job) =>
-        filters.mustContain!.some(
-          (keyword) =>
-            job.title.toLowerCase().includes(keyword.toLowerCase()) ||
-            job.description?.toLowerCase().includes(keyword.toLowerCase())
-        )
-      );
-    }
-
     if (filters.exclude?.length) {
       jobs = jobs.filter(
         (job) =>
@@ -295,21 +285,61 @@ export class ApifyDataSource implements DataSourceProvider {
     }
   }
 
+  /**
+   * Parse applicant count from Apify string like "Be among the first 25 applicants" or "200+ applicants"
+   */
+  private parseApplicantCount(raw: unknown): number | undefined {
+    if (typeof raw === 'number') return raw;
+    if (typeof raw !== 'string' || !raw) return undefined;
+    const match = raw.match(/(\d+)/);
+    return match ? parseInt(match[1], 10) : undefined;
+  }
+
+  /**
+   * Format salaryInfo array into a readable string.
+   * Apify returns e.g. ["$170000.00", "$180000.00"] or []
+   */
+  private formatSalary(raw: unknown): string | undefined {
+    if (!Array.isArray(raw) || raw.length === 0) {
+      if (typeof raw === 'string' && raw) return raw;
+      return undefined;
+    }
+    const formatted = raw.map((v: string) => {
+      const num = parseFloat(String(v).replace(/[^0-9.]/g, ''));
+      if (isNaN(num)) return v;
+      const currency = String(v).match(/^[^0-9]*/)?.[0] || '$';
+      if (num >= 1000) return `${currency}${Math.round(num / 1000)}K`;
+      return `${currency}${num}`;
+    });
+    if (formatted.length === 1) return formatted[0];
+    return `${formatted[0]} - ${formatted[1]}`;
+  }
+
+  /**
+   * Strip LinkedIn boilerplate from descriptions ("Show more Show less", etc.)
+   */
+  private cleanDescription(raw: string | undefined): string | undefined {
+    if (!raw) return undefined;
+    return raw.replace(/\s*Show more Show less\s*$/i, '').trim() || undefined;
+  }
+
   private transformJob(item: Record<string, unknown>): Job {
     return {
-      id: (item.id as string) || `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      title: (item.title as string) || (item.jobTitle as string) || 'Unknown Title',
-      company: (item.company as string) || (item.companyName as string) || 'Unknown Company',
+      id: (item.jobId as string) || (item.id as string) || `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      title: (item.jobTitle as string) || (item.title as string) || 'Unknown Title',
+      company: (item.companyName as string) || (item.company as string) || 'Unknown Company',
       companyUrl: item.companyUrl as string | undefined,
       companyLinkedIn: item.companyLinkedIn as string | undefined,
+      companyLogo: item.companyLogo as string | undefined,
       location: (item.location as string) || 'Unknown Location',
-      postedAt: (item.postedAt as string) || (item.publishedAt as string) || new Date().toISOString(),
-      url: this.cleanLinkedInUrl((item.url as string) || (item.jobUrl as string) || '#'),
-      description: item.description as string | undefined,
-      salary: item.salary as string | undefined,
-      employmentType: item.employmentType as string | undefined,
-      experienceLevel: item.experienceLevel as string | undefined,
-      applicantCount: item.applicantCount as number | undefined,
+      postedAt: (item.publishedAt as string) || (item.postedAt as string) || new Date().toISOString(),
+      postedAtRelative: (item.postedTime as string) || (item.postedAtRelative as string) || undefined,
+      url: this.cleanLinkedInUrl((item.jobUrl as string) || (item.url as string) || '#'),
+      description: this.cleanDescription((item.jobDescription as string) || (item.description as string)),
+      salary: this.formatSalary(item.salaryInfo ?? item.salary),
+      employmentType: (item.contractType as string) || (item.employmentType as string) || undefined,
+      experienceLevel: (item.experienceLevel as string) || undefined,
+      applicantCount: this.parseApplicantCount(item.applicationsCount ?? item.applicantCount),
     };
   }
 }

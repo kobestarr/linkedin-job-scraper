@@ -34,16 +34,6 @@ export class LocalStorageProvider implements StorageProvider {
     if (!filters) return jobs;
 
     // Apply filters client-side
-    if (filters.mustContain?.length) {
-      jobs = jobs.filter((job) =>
-        filters.mustContain!.some(
-          (keyword) =>
-            job.title.toLowerCase().includes(keyword.toLowerCase()) ||
-            job.description?.toLowerCase().includes(keyword.toLowerCase())
-        )
-      );
-    }
-
     if (filters.exclude?.length) {
       jobs = jobs.filter(
         (job) =>

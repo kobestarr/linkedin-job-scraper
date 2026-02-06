@@ -58,6 +58,7 @@ const config: Config = {
         shimmer: 'shimmer 2s linear infinite',
         'pulse-dot': 'pulseDot 2s ease-in-out infinite',
         'filter-in': 'filterIn 0.2s ease-out forwards',
+        'orb-pulse': 'orbPulse 2s ease-in-out infinite',
       },
       keyframes: {
         logoEntrance: {
@@ -94,6 +95,10 @@ const config: Config = {
         filterIn: {
           '0%': { opacity: '0', transform: 'scale(0.95) translateY(-4px)' },
           '100%': { opacity: '1', transform: 'scale(1) translateY(0)' },
+        },
+        orbPulse: {
+          '0%, 100%': { transform: 'scale(1)', opacity: '0.8' },
+          '50%': { transform: 'scale(1.15)', opacity: '1' },
         },
       },
     },

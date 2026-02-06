@@ -2,7 +2,7 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { DateRange, CompanySize, Seniority, EmploymentType, PayRange, ViewMode, AutoRefreshInterval, SortOption } from '@/types';
+import type { DateRange, CompanySize, Seniority, EmploymentType, PayRange, ViewMode, AutoRefreshInterval, SortOption, MatchMode } from '@/types';
 
 interface FilterState {
   // Search
@@ -17,7 +17,7 @@ interface FilterState {
   payRanges: PayRange[];
   excludeRecruiters: boolean;
   excludeCompanies: string[];
-  mustContainKeywords: boolean;
+  matchMode: MatchMode;
 
   // View
   viewMode: ViewMode;
@@ -37,7 +37,7 @@ interface FilterState {
   togglePayRange: (pr: PayRange) => void;
   setExcludeRecruiters: (val: boolean) => void;
   setExcludeCompanies: (list: string[]) => void;
-  setMustContainKeywords: (val: boolean) => void;
+  setMatchMode: (m: MatchMode) => void;
   setViewMode: (vm: ViewMode) => void;
   setAutoRefreshInterval: (ari: AutoRefreshInterval) => void;
   setSortBy: (s: SortOption) => void;
@@ -56,7 +56,7 @@ const DEFAULT_FILTERS = {
   payRanges: [] as PayRange[],
   excludeRecruiters: true,
   excludeCompanies: [] as string[],
-  mustContainKeywords: true,
+  matchMode: 'all-title' as MatchMode,
   viewMode: 'list' as ViewMode,
   autoRefreshInterval: 'off' as AutoRefreshInterval,
   sortBy: 'recent' as SortOption,
@@ -102,7 +102,7 @@ export const useFilterStore = create<FilterState>()(
 
       setExcludeRecruiters: (val) => set({ excludeRecruiters: val }),
       setExcludeCompanies: (list) => set({ excludeCompanies: list }),
-      setMustContainKeywords: (val) => set({ mustContainKeywords: val }),
+      setMatchMode: (m) => set({ matchMode: m }),
       setViewMode: (vm) => set({ viewMode: vm }),
       setAutoRefreshInterval: (ari) => set({ autoRefreshInterval: ari }),
       setSortBy: (s) => set({ sortBy: s }),
@@ -118,7 +118,7 @@ export const useFilterStore = create<FilterState>()(
           payRanges: DEFAULT_FILTERS.payRanges,
           excludeRecruiters: DEFAULT_FILTERS.excludeRecruiters,
           excludeCompanies: DEFAULT_FILTERS.excludeCompanies,
-          mustContainKeywords: DEFAULT_FILTERS.mustContainKeywords,
+          matchMode: DEFAULT_FILTERS.matchMode,
           sortBy: DEFAULT_FILTERS.sortBy,
         }),
 
@@ -132,7 +132,7 @@ export const useFilterStore = create<FilterState>()(
         if (state.employmentTypes.length > 0) count++;
         if (state.payRanges.length > 0) count++;
         if (!state.excludeRecruiters) count++;
-        if (!state.mustContainKeywords) count++;
+        if (state.matchMode !== 'all-title') count++;
         if (state.excludeCompanies.length > 0) count++;
         return count;
       },
@@ -148,12 +148,12 @@ export const useFilterStore = create<FilterState>()(
         payRanges: state.payRanges,
         excludeRecruiters: state.excludeRecruiters,
         excludeCompanies: state.excludeCompanies,
-        mustContainKeywords: state.mustContainKeywords,
+        matchMode: state.matchMode,
         viewMode: state.viewMode,
         autoRefreshInterval: state.autoRefreshInterval,
         sortBy: state.sortBy,
       }),
-      version: 3,
+      version: 4,
       migrate: () => DEFAULT_FILTERS,
     }
   )

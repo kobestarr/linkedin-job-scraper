@@ -21,6 +21,11 @@ export interface ClientConfig {
     location?: string;
     maxResults?: number;
   };
+  loading: {
+    messages?: string[];
+    leftLabel?: string;
+    rightLabel?: string;
+  };
 }
 
 function getEnv(key: string, fallback: string): string {
@@ -45,6 +50,13 @@ export function getClientConfig(): ClientConfig {
       jobTitle: getEnv('NEXT_PUBLIC_DEFAULT_JOB_TITLE', '') || undefined,
       location: getEnv('NEXT_PUBLIC_DEFAULT_LOCATION', '') || undefined,
       maxResults: parseInt(getEnv('NEXT_PUBLIC_DEFAULT_MAX_RESULTS', '150'), 10),
+    },
+    loading: {
+      messages: getEnv('NEXT_PUBLIC_LOADING_MESSAGES', '')
+        ? getEnv('NEXT_PUBLIC_LOADING_MESSAGES', '').split(',').map((s) => s.trim())
+        : undefined,
+      leftLabel: getEnv('NEXT_PUBLIC_LOADING_LEFT_LABEL', '') || undefined,
+      rightLabel: getEnv('NEXT_PUBLIC_LOADING_RIGHT_LABEL', '') || undefined,
     },
   };
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import { useFilterStore } from '@/stores/useFilterStore';
-import { DATE_RANGE_CONFIG, COMPANY_SIZE_CONFIG, SENIORITY_CONFIG, EMPLOYMENT_TYPE_CONFIG, PAY_RANGE_CONFIG, getCurrencyForLocation, formatPayLabel } from '@/types';
+import { DATE_RANGE_CONFIG, COMPANY_SIZE_CONFIG, SENIORITY_CONFIG, EMPLOYMENT_TYPE_CONFIG, PAY_RANGE_CONFIG, MATCH_MODE_CONFIG, getCurrencyForLocation, formatPayLabel } from '@/types';
 
 export function ActiveFilters() {
   const location = useFilterStore((s) => s.location);
@@ -11,6 +11,7 @@ export function ActiveFilters() {
   const employmentTypes = useFilterStore((s) => s.employmentTypes);
   const payRanges = useFilterStore((s) => s.payRanges);
   const excludeCompanies = useFilterStore((s) => s.excludeCompanies);
+  const matchMode = useFilterStore((s) => s.matchMode);
   const setLocation = useFilterStore((s) => s.setLocation);
   const setDateRange = useFilterStore((s) => s.setDateRange);
   const toggleCompanySize = useFilterStore((s) => s.toggleCompanySize);
@@ -18,6 +19,7 @@ export function ActiveFilters() {
   const toggleEmploymentType = useFilterStore((s) => s.toggleEmploymentType);
   const togglePayRange = useFilterStore((s) => s.togglePayRange);
   const setExcludeCompanies = useFilterStore((s) => s.setExcludeCompanies);
+  const setMatchMode = useFilterStore((s) => s.setMatchMode);
   const resetFilters = useFilterStore((s) => s.resetFilters);
 
   const pills: { key: string; label: string; onRemove: () => void }[] = [];
@@ -66,6 +68,13 @@ export function ActiveFilters() {
       key: 'excludeCompanies',
       label: `${excludeCompanies.length} excluded`,
       onRemove: () => setExcludeCompanies([]),
+    });
+  }
+  if (matchMode !== 'all-title') {
+    pills.push({
+      key: 'matchMode',
+      label: MATCH_MODE_CONFIG[matchMode].label,
+      onRemove: () => setMatchMode('all-title'),
     });
   }
 

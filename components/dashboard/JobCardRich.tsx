@@ -1,21 +1,34 @@
 'use client';
 
 import Image from 'next/image';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { cn, formatRelativeTime } from '@/lib/utils';
+import { getCompanyLogoUrl } from '@/lib/utils/company-logo';
+import { computePowerScore, getDescriptionPreview } from '@/lib/utils/power-leads';
 import type { Job } from '@/types';
 
 interface JobCardRichProps {
   job: Job;
   index?: number;
+  onSelect?: (id: string) => void;
+  isSelected?: boolean;
+  isChecked?: boolean;
+  onCheck?: (id: string, shiftKey: boolean) => void;
 }
 
-export function JobCardRich({ job, index = 0 }: JobCardRichProps) {
+export function JobCardRich({ job, index = 0, onSelect, isSelected, isChecked, onCheck }: JobCardRichProps) {
   const [logoError, setLogoError] = useState(false);
-  const showLogo = job.companyLogo && !logoError;
+  const logoUrl = getCompanyLogoUrl(job);
+  const showLogo = logoUrl && !logoError;
+  const power = useMemo(() => computePowerScore(job), [job]);
+  const descriptionPreview = useMemo(() => getDescriptionPreview(job.description), [job.description]);
 
   const handleClick = () => {
-    window.open(job.url, '_blank', 'noopener,noreferrer');
+    if (onSelect) {
+      onSelect(job.id);
+    } else {
+      window.open(job.url, '_blank', 'noopener,noreferrer');
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -29,23 +42,45 @@ export function JobCardRich({ job, index = 0 }: JobCardRichProps) {
     animationDelay: `${index * 60}ms`,
   };
 
+  const cardClass = cn(
+    'p-5 sm:p-6 cursor-pointer animate-slide-up',
+    power.tier === 'power' ? 'glass-card-power' : 'glass-card',
+    isSelected && 'border-primary/50 bg-primary/5'
+  );
+
   return (
     <div
       onClick={handleClick}
       onKeyDown={handleKeyDown}
-      className="glass-card p-5 sm:p-6 cursor-pointer animate-slide-up"
+      className={cardClass}
       style={animationStyle}
       role="article"
       tabIndex={0}
       aria-label={`${job.title} at ${job.company}`}
     >
-      {/* Top row: Logo + Company + Time */}
+      {/* Top row: Checkbox + Logo + Company + Time + Power badge */}
       <div className="flex items-start justify-between gap-3 mb-3">
-        <div className="flex items-center gap-3">
+        <div className="flex items-start gap-3">
+          {onCheck && (
+            <div
+              onClick={(e) => {
+                e.stopPropagation();
+                onCheck(job.id, e.shiftKey);
+              }}
+              className={`w-5 h-5 mt-1 rounded border flex items-center justify-center flex-shrink-0 transition-colors cursor-pointer ${
+                isChecked
+                  ? 'bg-primary/40 border-primary/60'
+                  : 'border-white/20 bg-white/5 hover:border-white/40'
+              }`}
+            >
+              {isChecked && <CheckIcon className="w-3 h-3 text-white" />}
+            </div>
+          )}
+
           {showLogo ? (
             <div className="relative w-14 h-14 sm:w-16 sm:h-16 rounded-xl overflow-hidden bg-white/5 flex-shrink-0">
               <Image
-                src={job.companyLogo!}
+                src={logoUrl!}
                 alt={`${job.company} logo`}
                 fill
                 className="object-contain"
@@ -68,19 +103,31 @@ export function JobCardRich({ job, index = 0 }: JobCardRichProps) {
             </h3>
           </div>
         </div>
-        <span className="text-xs text-white/40 flex-shrink-0 mt-1">
-          {job.postedAtRelative || formatRelativeTime(job.postedAt)}
-        </span>
+        <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
+          <span className="text-xs text-white/40">
+            {job.postedAtRelative || formatRelativeTime(job.postedAt)}
+          </span>
+          {power.tier === 'power' && (
+            <span className="badge-power-lead">
+              <BoltIcon className="w-3 h-3" />
+              Power Lead
+            </span>
+          )}
+          {power.tier === 'strong' && (
+            <span className="badge-strong-lead">
+              <BoltIcon className="w-3 h-3" />
+              Strong
+            </span>
+          )}
+        </div>
       </div>
 
-      {/* Description preview */}
-      {job.description && (
+      {descriptionPreview && (
         <p className="text-sm text-white/40 line-clamp-2 mb-3">
-          {job.description}
+          {descriptionPreview}
         </p>
       )}
 
-      {/* Metadata + Badges */}
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-xs text-white/50">
         <span className="flex items-center gap-1">
           <LocationIcon className="w-3 h-3" />
@@ -88,14 +135,12 @@ export function JobCardRich({ job, index = 0 }: JobCardRichProps) {
         </span>
         {job.employmentType && <span>{job.employmentType}</span>}
         {job.experienceLevel && <span>{job.experienceLevel}</span>}
-        {job.salary && <span className="text-primary-400">{job.salary}</span>}
+        {job.salary && <span className="text-primary-400 font-medium">{job.salary}</span>}
         {job.applicantCount !== undefined && job.applicantCount > 0 && (
           <span>
             {job.applicantCount} applicant{job.applicantCount !== 1 ? 's' : ''}
           </span>
         )}
-
-        {/* Badges */}
         {job.isRepeatHiring && (
           <span className="badge-repeat-hiring">
             <RepeatIcon className="w-3 h-3" />
@@ -107,6 +152,14 @@ export function JobCardRich({ job, index = 0 }: JobCardRichProps) {
         )}
       </div>
     </div>
+  );
+}
+
+function BoltIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M13 2L3 14h9l-1 10 10-12h-9l1-10z" />
+    </svg>
   );
 }
 
@@ -126,6 +179,14 @@ function RepeatIcon({ className }: { className?: string }) {
       <path d="M3 11V9a4 4 0 0 1 4-4h14" />
       <polyline points="7 23 3 19 7 15" />
       <path d="M21 13v2a4 4 0 0 1-4 4H3" />
+    </svg>
+  );
+}
+
+function CheckIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="20 6 9 17 4 12" />
     </svg>
   );
 }

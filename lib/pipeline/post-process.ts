@@ -1,4 +1,4 @@
-import type { Job, CompanySize, SortOption } from '@/types';
+import type { Job, CompanySize, SortOption, MatchMode } from '@/types';
 
 export interface PostProcessOptions {
   excludeRecruiters: boolean;
@@ -11,7 +11,7 @@ export interface ClientFilterOptions {
   excludeRecruiters: boolean;
   excludeCompanies: string[];
   companySizes: CompanySize[];
-  mustContainKeywords?: boolean;
+  matchMode?: MatchMode;
   searchQuery?: string;
 }
 
@@ -139,18 +139,28 @@ export function applyClientFilters(
     });
   }
 
-  // Must-contain keyword filter
-  if (options.mustContainKeywords && options.searchQuery) {
-    const words = options.searchQuery
-      .toLowerCase()
-      .split(/\s+/)
-      .filter((w) => w.length > 2);
+  // Match mode keyword filter
+  if (options.matchMode && options.matchMode !== 'off' && options.searchQuery) {
+    const query = options.searchQuery.toLowerCase();
+    const words = query.split(/\s+/).filter((w) => w.length > 2);
 
     if (words.length > 0) {
       result = result.filter((job) => {
         const titleLower = job.title.toLowerCase();
         const descLower = (job.description || '').toLowerCase();
-        return words.some((w) => titleLower.includes(w) || descLower.includes(w));
+
+        switch (options.matchMode) {
+          case 'exact-title':
+            return titleLower.includes(query.trim());
+          case 'all-title':
+            return words.every((w) => titleLower.includes(w));
+          case 'all-anywhere':
+            return words.every((w) => titleLower.includes(w) || descLower.includes(w));
+          case 'broad':
+            return words.some((w) => titleLower.includes(w) || descLower.includes(w));
+          default:
+            return true;
+        }
       });
     }
   }

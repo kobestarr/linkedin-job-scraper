@@ -41,7 +41,6 @@ export interface Person {
 
 // Filter state
 export interface JobFilters {
-  mustContain?: string[];
   exclude?: string[];
   companySize?: CompanySize[];
   seniority?: Seniority[];
@@ -313,6 +312,17 @@ export const SORT_CONFIG: Record<SortOption, { label: string }> = {
   'applicants':  { label: 'Most Applicants' },
   'company-az':  { label: 'Company A-Z' },
   'relevance':   { label: 'Best Match' },
+};
+
+// Match mode for keyword filtering
+export type MatchMode = 'all-title' | 'all-anywhere' | 'exact-title' | 'broad' | 'off';
+
+export const MATCH_MODE_CONFIG: Record<MatchMode, { label: string; description: string }> = {
+  'exact-title':  { label: 'Exact Title',      description: 'Exact phrase must appear in job title' },
+  'all-title':    { label: 'Title Keywords',    description: 'All keywords must appear in job title' },
+  'all-anywhere': { label: 'Title + Description', description: 'All keywords must appear in title or description' },
+  'broad':        { label: 'Broad Match',       description: 'Any keyword in title or description' },
+  'off':          { label: 'No Filter',         description: 'Show all results from LinkedIn' },
 };
 
 // View mode
