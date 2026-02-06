@@ -108,6 +108,13 @@ If complex animations are needed in future:
 
 The UI uses a "glassmorphism" design language - translucent surfaces with blur effects that create depth. This is inspired by Apple's macOS design system.
 
+**However, aesthetics must not compromise accessibility.** High contrast is essential for:
+
+1. **Accessibility (WCAG compliance)** - Users with visual impairments, color blindness, or age-related vision changes need sufficient contrast
+2. **User adoption** - Easy-to-read interfaces encourage usage; hard-to-see UIs frustrate users
+3. **Diverse viewing conditions** - Bright offices, dim rooms, varying monitor quality
+4. **Screen sharing** - Video compression on Zoom/Teams/Meet reduces contrast further
+
 ### Original Problem
 
 Initial opacity values were too low for practical use:
@@ -118,10 +125,7 @@ Initial opacity values were too low for practical use:
 | Glass border | `0.08` | Too subtle to define panel edges |
 | Glass hover | `0.08` | Hover state barely noticeable |
 
-This was especially problematic during **screen sharing on video calls** (Zoom, Teams, Google Meet) where:
-- Video compression reduces contrast
-- Viewers have varying monitor calibrations
-- Small text and subtle effects become invisible
+This created accessibility barriers and usability issues.
 
 ### Current Values (High Contrast)
 
@@ -175,10 +179,20 @@ Or add a high-contrast mode toggle:
 }
 ```
 
-### Testing for Video Calls
+### Testing Contrast
 
-Before demos:
+**Accessibility testing:**
+1. Use browser DevTools to simulate vision deficiencies (Chrome: Rendering > Emulate vision deficiencies)
+2. Test with screen readers to ensure all interactive elements are discoverable
+3. Check WCAG contrast ratios - aim for 4.5:1 for normal text, 3:1 for large text
+4. Test on low-quality/uncalibrated monitors
+
+**Video call testing:**
 1. Share screen on target platform (Zoom/Teams/Meet)
 2. View on a second device or have colleague check
-3. Adjust `--glass-bg-opacity` until panels are clearly visible
+3. Adjust opacity values until panels are clearly visible
 4. Test at different window sizes (compression varies)
+
+### Principle
+
+**When in doubt, increase contrast.** A slightly less "glassy" effect that everyone can use is better than a beautiful UI that excludes users.
