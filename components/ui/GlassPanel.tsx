@@ -20,36 +20,33 @@ interface GlassPanelProps extends Omit<HTMLMotionProps<'div'>, 'ref' | 'children
  * - card: Interactive card with hover lift effect
  */
 export const GlassPanel = forwardRef<HTMLDivElement, GlassPanelProps>(
-  ({ className, variant = 'default', animate = true, delay = 0, children, initial, animate: animateProp, transition, ...props }, ref) => {
+  ({ className, variant = 'default', animate = false, delay = 0, children, initial, animate: animateProp, transition, ...props }, ref) => {
     const baseClasses = {
       default: 'glass',
       subtle: 'glass-subtle',
       card: 'glass-card',
     };
 
-    const content = (
-      <div
-        ref={ref}
-        className={cn(baseClasses[variant], className)}
-        {...(props as React.HTMLAttributes<HTMLDivElement>)}
-      >
-        {children}
-      </div>
-    );
-
+    // Default to no animation for reliability
     if (!animate) {
-      return content;
+      return (
+        <div
+          ref={ref}
+          className={cn(baseClasses[variant], className)}
+          {...(props as React.HTMLAttributes<HTMLDivElement>)}
+        >
+          {children}
+        </div>
+      );
     }
 
     return (
       <motion.div
-        // Apply user-provided animation props first (as fallbacks), then our defaults
-        initial={initial ?? { opacity: 0, y: 20 }}
-        animate={animateProp ?? { opacity: 1, y: 0 }}
+        initial={initial ?? { opacity: 1 }}
+        animate={animateProp ?? { opacity: 1 }}
         transition={transition ?? {
-          duration: 0.4,
+          duration: 0.3,
           delay,
-          ease: [0.34, 1.56, 0.64, 1], // Spring-like easing
         }}
         className={cn(baseClasses[variant], className)}
         {...props}

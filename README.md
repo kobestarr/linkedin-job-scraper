@@ -72,6 +72,7 @@ Changelog is generated automatically. See [CHANGELOG.md](CHANGELOG.md).
 | [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) | Dev setup, project structure, scripts |
 | [docs/PROVIDERS.md](docs/PROVIDERS.md) | Provider architecture, how to add new ones |
 | [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | Vercel, Docker, multi-instance deployment |
+| [docs/DESIGN_DECISIONS.md](docs/DESIGN_DECISIONS.md) | UI/UX decisions, Framer Motion removal, color contrast |
 | [.github/commit-convention.md](.github/commit-convention.md) | Commit message format |
 | [CHANGELOG.md](CHANGELOG.md) | Release history |
 
