@@ -1,6 +1,5 @@
 'use client';
 
-import { motion } from 'framer-motion';
 import Image from 'next/image';
 import { useState } from 'react';
 import { cn, formatRelativeTime } from '@/lib/utils';
@@ -26,18 +25,17 @@ export function JobCard({ job, index = 0 }: JobCardProps) {
     }
   };
 
+  // CSS animation delay based on index for staggered effect
+  const animationStyle = {
+    animationDelay: `${index * 50}ms`,
+  };
+
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{
-        duration: 0.4,
-        delay: index * 0.05,
-        ease: [0.34, 1.56, 0.64, 1],
-      }}
+    <div
       onClick={handleClick}
       onKeyDown={handleKeyDown}
-      className="glass-card p-4 sm:p-5 cursor-pointer"
+      className="glass-card p-4 sm:p-5 cursor-pointer animate-slide-up"
+      style={animationStyle}
       role="article"
       tabIndex={0}
       aria-label={`${job.title} at ${job.company}`}
@@ -111,7 +109,7 @@ export function JobCard({ job, index = 0 }: JobCardProps) {
           )}
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 }
 

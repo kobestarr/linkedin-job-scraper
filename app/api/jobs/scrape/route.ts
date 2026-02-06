@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDataSourceProvider } from '@/lib/providers/data-source';
+import { logger } from '@/lib/logger';
 import type { ScrapeOptions } from '@/lib/providers/data-source/types';
 
 export async function POST(request: NextRequest) {
@@ -35,7 +36,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(result);
   } catch (error) {
-    console.error('[API /jobs/scrape] Error:', error);
+    logger.error('API /jobs/scrape failed', { error });
 
     const message =
       error instanceof Error ? error.message : 'An unexpected error occurred';
