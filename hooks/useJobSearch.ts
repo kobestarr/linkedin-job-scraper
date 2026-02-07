@@ -51,9 +51,12 @@ export function useJobSearch(): UseJobSearchReturn {
   const abortRef = useRef(false);
   const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastOptionsRef = useRef<ScrapeOptions | null>(null);
+  const dedupeKeysRef = useRef<Set<string>>(new Set());
 
-  const existingDedupeKeys = useMemo(() => {
-    return new Set(rawJobs.map((j) => j.dedupeKey).filter(Boolean) as string[]);
+  // Update dedupe keys ref whenever rawJobs changes
+  useEffect(() => {
+    const keys = new Set(rawJobs.map((j) => j.dedupeKey).filter(Boolean) as string[]);
+    dedupeKeysRef.current = keys;
   }, [rawJobs]);
 
   const stopPolling = useCallback(() => {
@@ -149,7 +152,7 @@ export function useJobSearch(): UseJobSearchReturn {
                 excludeRecruiters: false,
                 excludeCompanies: [],
                 companySizes: [],
-                existingDedupeKeys,
+                existingDedupeKeys: dedupeKeysRef.current,
               });
               allJobs = [...allJobs, ...processed];
               offset = data.offset;
@@ -192,7 +195,7 @@ export function useJobSearch(): UseJobSearchReturn {
         }
       }
     },
-    [stopPolling, existingDedupeKeys, setCachedResults]
+    [stopPolling, setCachedResults]
   );
 
   const cancel = useCallback(() => {
@@ -211,7 +214,7 @@ export function useJobSearch(): UseJobSearchReturn {
     setStreamProgress(null);
   }, [stopPolling]);
 
-  // Auto-refresh timer
+  // Auto-refresh timer - uses ref to avoid dependency on search callback
   useEffect(() => {
     const config = AUTO_REFRESH_CONFIG[autoRefreshInterval];
     if (!config.ms || !lastSearch || !lastOptionsRef.current) return;
@@ -219,11 +222,13 @@ export function useJobSearch(): UseJobSearchReturn {
     const timer = setInterval(() => {
       setIsRefreshing(true);
       const opts = lastOptionsRef.current!;
+      // Call search directly with stored options to avoid callback dependency issues
       search(opts.jobTitle, opts);
     }, config.ms);
 
     return () => clearInterval(timer);
-  }, [autoRefreshInterval, lastSearch, search]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoRefreshInterval, lastSearch]);
 
   // Cleanup on unmount
   useEffect(() => {

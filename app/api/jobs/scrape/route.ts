@@ -90,9 +90,9 @@ async function handlePoll(body: { runId: string; datasetId: string; offset?: num
     return NextResponse.json({ error: 'runId and datasetId are required' }, { status: 400 });
   }
 
-  // Check run status (use query param token as fallback for auth)
+  // Check run status (use Authorization header only - no query param to avoid logging token)
   const statusRes = await fetch(
-    `https://api.apify.com/v2/actor-runs/${runId}?token=${APIFY_TOKEN}`,
+    `https://api.apify.com/v2/actor-runs/${runId}`,
     { headers: { Authorization: `Bearer ${APIFY_TOKEN}` } }
   );
 
@@ -108,7 +108,7 @@ async function handlePoll(body: { runId: string; datasetId: string; offset?: num
 
   // Fetch new items from dataset (using offset to get only new ones)
   const itemsRes = await fetch(
-    `https://api.apify.com/v2/datasets/${datasetId}/items?format=json&offset=${offset}&limit=100&token=${APIFY_TOKEN}`,
+    `https://api.apify.com/v2/datasets/${datasetId}/items?format=json&offset=${offset}&limit=100`,
     { headers: { Authorization: `Bearer ${APIFY_TOKEN}` } }
   );
 

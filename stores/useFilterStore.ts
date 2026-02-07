@@ -154,7 +154,13 @@ export const useFilterStore = create<FilterState>()(
         sortBy: state.sortBy,
       }),
       version: 4,
-      migrate: () => DEFAULT_FILTERS,
+      migrate: (persistedState: unknown, version: number) => {
+        // If we have persisted state from a previous version, merge it with defaults
+        if (persistedState && typeof persistedState === 'object') {
+          return { ...DEFAULT_FILTERS, ...persistedState };
+        }
+        return DEFAULT_FILTERS;
+      },
     }
   )
 );

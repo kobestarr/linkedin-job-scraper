@@ -55,9 +55,23 @@ function cleanDescription(raw: string | undefined): string | undefined {
 /**
  * Transform a raw Apify item into our Job type.
  */
+/**
+ * Generate a deterministic ID from job data to avoid hydration mismatches.
+ */
+function generateJobId(item: Record<string, unknown>): string {
+  const jobId = (item.jobId as string) || (item.id as string);
+  if (jobId) return jobId;
+  
+  // Deterministic fallback using available data (avoids Math.random for SSR)
+  const company = String(item.companyName || item.company || 'unknown').toLowerCase().replace(/\s+/g, '-');
+  const title = String(item.jobTitle || item.title || 'unknown').toLowerCase().replace(/\s+/g, '-');
+  const date = String(item.publishedAt || item.postedAt || Date.now()).slice(0, 10);
+  return `${company}-${title}-${date}`.replace(/[^a-z0-9-]/g, '').slice(0, 100);
+}
+
 export function transformApifyJob(item: Record<string, unknown>): Job {
   return {
-    id: (item.jobId as string) || (item.id as string) || `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    id: generateJobId(item),
     title: (item.jobTitle as string) || (item.title as string) || 'Unknown Title',
     company: (item.companyName as string) || (item.company as string) || 'Unknown Company',
     companyUrl: item.companyUrl as string | undefined,

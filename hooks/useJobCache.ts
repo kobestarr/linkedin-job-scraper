@@ -19,7 +19,8 @@ export function useJobCache() {
       const raw = localStorage.getItem(CACHE_KEY);
       if (!raw) return null;
       return JSON.parse(raw) as CachedResults;
-    } catch {
+    } catch (err) {
+      logger.warn('[useJobCache] Failed to parse cached results', { error: err });
       return null;
     }
   }, []);
@@ -34,10 +35,14 @@ export function useJobCache() {
       };
       const serialized = JSON.stringify(data);
       // Guard against localStorage quota (roughly 5MB)
-      if (serialized.length > 4 * 1024 * 1024) return;
+      if (serialized.length > 4 * 1024 * 1024) {
+        logger.warn('[useJobCache] Data too large to cache, skipping', { size: serialized.length });
+        return;
+      }
       localStorage.setItem(CACHE_KEY, serialized);
-    } catch {
-      // Silently fail on quota errors
+    } catch (err) {
+      // Log quota errors but don't break the app
+      logger.warn('[useJobCache] Failed to cache results', { error: err });
     }
   }, []);
 
