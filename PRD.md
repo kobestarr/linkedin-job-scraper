@@ -1,8 +1,8 @@
 # LinkedIn Job Intelligence Platform — Product Requirements Document (PRD)
 
-**Version:** 2.0 (Reconstructed)  
-**Last Updated:** February 6, 2026  
-**Status:** Slice 3 Complete, Slice 4 = MVP Demo  
+**Version:** 2.0 (Reconstructed)
+**Last Updated:** February 7, 2026
+**Status:** Slice 5 Complete (v1.2.0) — UX Polish, Detail Panel, Streaming, Sorting, Selection
 
 ---
 
@@ -48,16 +48,66 @@ Product‑as‑a‑Service with a high‑spec setup fee plus ongoing service. De
 
 ---
 
+## 2.1 Current Implementation Status
+
+### Completed (v1.2.0 — Slice 5)
+
+| Feature | Status | Notes |
+|---------|--------|-------|
+| Live LinkedIn scraping | DONE | Apify start/poll streaming architecture |
+| Search by title + country | DONE | With location dropdown |
+| Date range filter | DONE | 24h, 3d, 7d, 14d, 30d |
+| Company size filter | PARTIAL | UI built, filtering pending enrichment data |
+| Exclude recruiters | DONE | Default ON, toggleable |
+| Exclude companies | DONE | Pre-set list during onboarding |
+| List view | DONE | Compact row layout |
+| Card view | DONE | Logo + metadata + Power Lead badges |
+| Glass UI design system | DONE | Dark mode, high contrast, demo-ready |
+| Streaming results | DONE | Progressive loading as Apify finds jobs |
+| Job detail panel | DONE | Slide-in drawer with full description |
+| Sorting (5 options) | DONE | Recent, salary, applicants, A-Z, relevance |
+| Match mode filter | DONE | 5 modes: exact title → broad → off |
+| Job selection + batch actions | DONE | Checkbox, shift-click, floating bar |
+| Company logos (Clearbit) | DONE | With letter-initial fallback |
+| Power Leads scoring | DONE | Composite score, badges, card glow |
+| Motion tracker loading | DONE | Aliens-style canvas radar, configurable text |
+| White-label config | DONE | Env-var driven branding, loading messages |
+| LinkedIn URL cleanup | DONE | Strips tracking params |
+| Poll retry logic | DONE | 3 retries with backoff |
+| Seniority filter | DONE | UI dropdown |
+| Employment type filter | DONE | UI dropdown |
+| Pay filter | DONE | UI dropdown |
+| Auto-refresh | DONE | 30m / 1h / 2h / 4h intervals |
+| Result caching | DONE | localStorage, last 200 jobs |
+
+### Not Yet Built
+
+| Feature | Target | Notes |
+|---------|--------|-------|
+| "Prime Picks" sort | Slice 6 | Sort by Power Lead score |
+| Company enrichment | Phase 2 | Captain Data integration |
+| Decision-Maker Leads | Phase 2 | Requires enrichment pipeline |
+| CSV/CRM export | Phase 2 | SelectionBar buttons wired, backend pending |
+| Auth/multi-user | Phase 2 | Provider choice TBD |
+| Saved searches | Phase 2 | |
+| Notes per job | Phase 2 | |
+| Analytics dashboard | Phase 2 | |
+| Cost guardrails | Phase 2 | Credit caps, usage meters |
+
+---
+
 ## 3. Architecture Overview
 
 ### 3.1 System Architecture
-- Next.js Dashboard
+- Next.js 14 Dashboard (App Router)
 - CLI Scraper (legacy, supports data acquisition)
 - Provider Layer (swappable sources)
-- Data Source: Apify (required)
-- Storage: SQLite (MVP) → Postgres (future)
+- Data Source: Apify start/poll streaming (actor `2rJKkhh7vjpX7pvjg`)
+- Storage: localStorage cache (MVP) → SQLite/Postgres (future)
 - Enrichment: Captain Data (Phase 2)
 - Outreach: CSV export (Phase 2), LLM email generation (Phase 2)
+- State: Zustand with localStorage persistence (version-migrated)
+- Pipeline: Post-process → client filters → sorting (all client-side, instant)
 
 ### 3.2 Central Codebase + Multi‑Instance
 - Single repository
@@ -69,20 +119,25 @@ Product‑as‑a‑Service with a high‑spec setup fee plus ongoing service. De
 ## 4. Data Model (MVP)
 
 ### Job
-- id
+- id (deterministic: jobId from Apify, or company-title-date composite)
 - title
 - company
-- companyLinkedInUrl
+- companyUrl
+- companyLinkedIn
 - companyLogo
 - location
 - postedAt (ISO)
 - postedAtRelative
-- url
+- url (cleaned — tracking params stripped)
 - description
+- salary (formatted from salaryInfo array)
 - employmentType
 - experienceLevel
-- companySize (when available)
+- applicantCount (parsed from "Be among the first N applicants")
+- companySize (when available — pending enrichment)
 - dedupeKey (company + title + date)
+- isRecruiter (flagged by recruiter keyword detection)
+- isRepeatHiring (flagged by dedup pipeline)
 
 ### Decision‑Maker Lead (Phase 2)
 - fullName
@@ -97,22 +152,36 @@ Product‑as‑a‑Service with a high‑spec setup fee plus ongoing service. De
 
 ## 5. Filters & Search
 
-### Required Filters (MVP)
-- Job Title
-- Country
-- Date Range (24h, 3d, 7d, 14d, 30d)
-- Company Size
-- Exclude Recruiters (default ON)
-- Exclude Companies list
+### Implemented Filters
+- Job Title (text input)
+- Location / Country (dropdown)
+- Date Range (24h, 3d, 7d, 14d, 30d) — server-side via Apify
+- Company Size (UI built, filtering pending enrichment)
+- Seniority Level (dropdown)
+- Employment Type (dropdown)
+- Pay Range (dropdown)
+- Exclude Recruiters (default ON, toggle)
+- Exclude Companies list (pre-set)
+- Match Mode (Exact Title / All Words Title / All Words Anywhere / Broad / Off) — client-side
+
+### Sorting
+- Most Recent (default)
+- Highest Salary
+- Most Applicants
+- Company A–Z
+- Best Match (relevance — word frequency scoring)
+- Prime Picks (planned — Power Lead score)
 
 ### Search Execution
 - Search Now button
-- Auto‑rerun on filter change
+- Streaming results: jobs appear as Apify finds them
 - Auto‑refresh interval: 30m / 1h / 2h / 4h
+- Cached last results shown immediately on reload
 
 ### Deduplication
 - company + job title + posted date
-- Repeat postings should surface and be flagged as “repeat hiring signal.”
+- Repeat postings surface and are flagged as "repeat hiring signal"
+- Dedupe runs during streaming to prevent duplicates across poll batches
 
 ---
 

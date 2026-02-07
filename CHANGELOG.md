@@ -7,6 +7,98 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Planned
+- "Prime Picks" sort option (sort by Power Lead score)
+
+## [1.2.0] - 2026-02-07
+
+### Added
+
+- **Streaming Search Architecture** (`hooks/useJobSearch.ts`, `app/api/jobs/scrape/route.ts`)
+  - Start/poll model: fires Apify run, then polls for results in batches
+  - Results stream into the UI as they arrive (progressive loading)
+  - Retry logic: 3 consecutive retries on transient poll failures with "Reconnecting..." status
+  - First poll delayed 3s to let Apify initialize
+
+- **Job Detail Panel** (`components/dashboard/JobDetailPanel.tsx`)
+  - Right-side slide-in drawer (480px–560px) with framer-motion spring animation
+  - Full job description with intelligent heading detection (section headers, metadata fields, title-case)
+  - Company logo with Clearbit fallback and letter-initial default
+  - Metadata pills (location, employment type, experience, salary, applicants, posted date)
+  - Power Lead / Strong Lead / Repeat Hiring / Recruiter badges
+  - "View on LinkedIn" and "Copy Link" footer actions
+  - Escape key to close, backdrop click to close
+
+- **Sorting** (`lib/pipeline/post-process.ts`, `components/filters/SortDropdown.tsx`)
+  - 5 sort options: Most Recent, Highest Salary, Most Applicants, Company A–Z, Best Match (relevance)
+  - Relevance scoring: counts search term word occurrences in title + description
+  - Instant client-side sort via `useMemo` derivation chain
+
+- **Match Mode Filter** (`components/filters/MatchModeFilter.tsx`)
+  - 5 modes: Exact Title, All Words in Title, All Words Anywhere, Broad Match, Off
+  - Replaces the simpler must-contain toggle with granular keyword matching
+  - Client-side filtering via `applyClientFilters()` pipeline
+
+- **Job Selection** (`stores/useSelectionStore.ts`, `components/dashboard/SelectionBar.tsx`)
+  - Checkbox selection on cards with shift-click range select
+  - Floating selection bar with count, Select All, Deselect All
+  - Enrich Selected / Export Selected action buttons (wired for Phase 2)
+  - Ephemeral store — not persisted to localStorage
+
+- **Company Logos** (`lib/utils/company-logo.ts`)
+  - Clearbit logo resolution from company URL domain
+  - Graceful fallback to letter-initial avatar on 404
+  - Added Clearbit to Next.js image remote patterns
+
+- **Power Leads Scoring** (`lib/utils/power-leads.ts`)
+  - Composite score from applicant count, posting recency, salary presence
+  - Tier classification: Power Lead, Strong Lead, or none
+  - Badges and green glow styling on qualifying cards
+
+- **Aliens Motion Tracker Loading Animation** (`components/dashboard/SearchLoadingState.tsx`)
+  - Canvas-based radar with `requestAnimationFrame` at 60fps
+  - 4 concentric rings, crosshairs, 36 tick marks, rotating sweep line with 72° trail
+  - 14 blips spawning at outer edge, creeping inward with angular wobble
+  - Blips brighten as they approach center (you = the searcher)
+  - Outward pulse ring every 3s, corner bracket HUD frame
+  - Digital readout bar with zero-padded job count
+  - Cycling status messages with framer-motion fade transitions
+
+- **White-Label Loading Config** (`lib/config/client.ts`)
+  - `NEXT_PUBLIC_LOADING_MESSAGES` — comma-separated cycling messages
+  - `NEXT_PUBLIC_LOADING_LEFT_LABEL` — left readout label (default: "TRACK")
+  - `NEXT_PUBLIC_LOADING_RIGHT_LABEL` — right readout label (default: "SCAN")
+
+- **Streaming Progress Indicator** (`app/page.tsx`)
+  - Full radar animation when waiting for first results
+  - Compact "N jobs found — still scanning..." bar once results start arriving
+  - Results render immediately as they stream in
+
+- **Client-Side Job Transformation** (`lib/utils/transform-job.ts`)
+  - `transformApifyJob()` for streaming: transforms raw Apify items client-side
+  - LinkedIn URL cleanup: strips tracking params (`trackingId`, `refId`) to prevent authwall
+  - Salary formatting, applicant count parsing, description cleanup
+
+- **Additional Filters** (`components/filters/`)
+  - SeniorityFilter, EmploymentTypeFilter, PayFilter dropdowns
+
+### Fixed
+
+- **LinkedIn authwall redirect** — Cleaned tracking params from URLs so "View on LinkedIn" works
+- **Poll failure resilience** — Transient 404s no longer kill the entire search; retries with backoff
+- **Dead code cleanup** — Removed unused `MustContainToggle.tsx` and stale `mustContain` references from types, providers
+
+### Changed
+
+- **Store version bumped to 4** — Added `matchMode`, `sortBy`, `selectedJobId`; smart migration preserves user preferences
+- **Card click behavior** — Cards now open detail panel instead of navigating to LinkedIn
+- **Result display** — Jobs render as soon as they start arriving (not gated on search completion)
+
+### Security
+
+- **API token removed from URL query params** — Apify calls now use Authorization header only (tokens in URLs leak to logs/proxies)
+- **Deterministic job IDs** — Replaced `Math.random()` with `company-title-date` composite to prevent SSR hydration mismatches
+
 ## [1.1.0] - 2026-02-05
 
 ### Added
@@ -226,7 +318,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Retry logic with exponential backoff
   - Scheduler with cron support for automated runs
 
-[Unreleased]: https://github.com/kobestarr/linkedin-job-scraper/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/kobestarr/linkedin-job-scraper/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/kobestarr/linkedin-job-scraper/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/kobestarr/linkedin-job-scraper/compare/v1.0.1...v1.1.0
 [1.0.1]: https://github.com/kobestarr/linkedin-job-scraper/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/kobestarr/linkedin-job-scraper/releases/tag/v1.0.0
