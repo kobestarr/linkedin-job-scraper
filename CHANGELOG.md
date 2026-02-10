@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Missing logger import** — Added missing `logger` import in `hooks/useJobCache.ts`
+- **Animation ref cleanup** — Reset `prevTimeRef` in `SearchLoadingState` on animation start to prevent time jump issues
+- **Deterministic ID generation** — Replaced `Math.random()` in `ApifyDataSource` with deterministic `company-title-date` composite ID
+- **Code cleanup** — Simplified placeholder comment in company size filter (removed commented-out code)
+- **Documentation** — Added inline comment documenting default Apify actor ID purpose
+
 ### Planned
 - "Prime Picks" sort option (sort by Power Lead score)
 

@@ -324,8 +324,16 @@ export class ApifyDataSource implements DataSourceProvider {
   }
 
   private transformJob(item: Record<string, unknown>): Job {
+    // Deterministic ID generation to avoid hydration mismatches
+    const deterministicId = () => {
+      const company = String(item.companyName || item.company || 'unknown').toLowerCase().replace(/\s+/g, '-');
+      const title = String(item.jobTitle || item.title || 'unknown').toLowerCase().replace(/\s+/g, '-');
+      const date = String(item.publishedAt || item.postedAt || Date.now()).slice(0, 10);
+      return `${company}-${title}-${date}`.replace(/[^a-z0-9-]/g, '').slice(0, 100);
+    };
+    
     return {
-      id: (item.jobId as string) || (item.id as string) || `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      id: (item.jobId as string) || (item.id as string) || deterministicId(),
       title: (item.jobTitle as string) || (item.title as string) || 'Unknown Title',
       company: (item.companyName as string) || (item.company as string) || 'Unknown Company',
       companyUrl: item.companyUrl as string | undefined,

@@ -100,7 +100,6 @@ Product‑as‑a‑Service with a high‑spec setup fee plus ongoing service. De
 
 ### 3.1 System Architecture
 - Next.js 14 Dashboard (App Router)
-- CLI Scraper (legacy, supports data acquisition)
 - Provider Layer (swappable sources)
 - Data Source: Apify start/poll streaming (actor `2rJKkhh7vjpX7pvjg`)
 - Storage: localStorage cache (MVP) → SQLite/Postgres (future)
@@ -109,10 +108,28 @@ Product‑as‑a‑Service with a high‑spec setup fee plus ongoing service. De
 - State: Zustand with localStorage persistence (version-migrated)
 - Pipeline: Post-process → client filters → sorting (all client-side, instant)
 
+**Note:** Legacy CLI scraper exists in `src/` directory (Node.js-based, Google Sheets export). This is maintained for existing CLI workflows but new features are built in the Next.js provider architecture.
+
 ### 3.2 Central Codebase + Multi‑Instance
 - Single repository
 - Ability to deploy updates across multiple client instances
 - White‑label branding via environment config per instance
+
+### 3.3 Code Quality Standards
+- **TypeScript**: Strict typing, no `any` types in production code
+- **Logging**: Unified logger with context support (no raw console.log)
+- **Error Handling**: Try-catch for async, centralized error messages
+- **React Hooks**: Proper cleanup for effects, timers, and event listeners
+- **Performance**: Memoization for expensive calculations, stable references
+- **Security**: Environment variables for secrets, input validation, deterministic IDs for SSR
+
+### 3.4 Code Review Process
+All code changes undergo review for:
+- Proper error handling and async cleanup
+- TypeScript type safety
+- Production readiness (no debug statements, TODOs tracked)
+- React best practices (effect cleanup, dependency arrays)
+- Security (auth checks, input validation)
 
 ---
 

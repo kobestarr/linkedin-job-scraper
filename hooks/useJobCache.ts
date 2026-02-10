@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback } from 'react';
+import { logger } from '@/lib/logger';
 import type { Job } from '@/types';
 
 const CACHE_KEY = 'ljip_last_results';

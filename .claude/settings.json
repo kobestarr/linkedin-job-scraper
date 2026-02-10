@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//Users/kobestarr/Downloads/**)",
+      "Read(//Users/kobestarr/**)"
+    ],
+    "additionalDirectories": [
+      "/Users/kobestarr/Downloads/outreach-automation/shared/outreach-core/content-generation"
+    ]
+  }
+}

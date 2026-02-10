@@ -134,15 +134,10 @@ export function applyClientFilters(
   // Filter by company size (best-effort: requires enrichment data)
   // NOTE: Company size filtering requires external enrichment (e.g., Clearbit, Captain Data)
   // since LinkedIn job listings don't consistently include company size.
-  // For now, this filter is disabled until enrichment is implemented.
-  // TODO: Implement after adding company enrichment provider
+  // This filter is currently a no-op until enrichment is implemented in Phase 2.
   if (options.companySizes.length > 0) {
-    // Placeholder: pass through all jobs since we don't have reliable size data
-    // In Phase 2, this will filter based on enriched company data
-    // result = result.filter((job) => {
-    //   if (!job.companySize) return true; // Include if unknown
-    //   return options.companySizes.includes(job.companySize);
-    // });
+    // Phase 2: Filter based on enriched company data
+    // For now, all jobs pass through since we don't have reliable size data
   }
 
   // Match mode keyword filter

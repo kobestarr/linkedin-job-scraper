@@ -3,7 +3,7 @@ import { logger } from '@/lib/logger';
 import type { ScrapeOptions } from '@/lib/providers/data-source/types';
 
 const APIFY_TOKEN = process.env.APIFY_API_TOKEN;
-const ACTOR_ID = process.env.APIFY_ACTOR_ID || '2rJKkhh7vjpX7pvjg';
+const ACTOR_ID = process.env.APIFY_ACTOR_ID || '2rJKkhh7vjpX7pvjg'; // Default: cheap_scraper/linkedin-job-scraper
 
 export async function POST(request: NextRequest) {
   try {

@@ -238,6 +238,7 @@ export function SearchLoadingState({
 
   // Start / stop animation
   useEffect(() => {
+    prevTimeRef.current = 0;
     rafRef.current = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(rafRef.current);
   }, [animate]);

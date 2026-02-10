@@ -13,10 +13,11 @@ export class NoopEnrichmentProvider implements EnrichmentProvider {
   readonly name = 'No Enrichment';
 
   async enrichJob(job: Job, _options?: EnrichmentOptions): Promise<EnrichedJob> {
-    // Return job as-is, marked as not enriched
+    // Return job as-is, marked as enriched (processed through the enrichment pipeline)
+    // This is a no-op provider, so no actual enrichment data is added
     return {
       ...job,
-      enriched: true, // Technically "processed" even if no data added
+      enriched: true, // Indicates the job passed through the enrichment pipeline
       enrichedAt: new Date().toISOString(),
     };
   }
