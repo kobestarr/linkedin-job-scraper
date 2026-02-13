@@ -15,8 +15,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Code cleanup** — Simplified placeholder comment in company size filter (removed commented-out code)
 - **Documentation** — Added inline comment documenting default Apify actor ID purpose
 
-### Planned
-- "Prime Picks" sort option (sort by Power Lead score)
+## [1.3.0] - 2026-02-13
+
+### Added - Slice 6
+
+- **Prime Picks Sort** (`types/index.ts`, `lib/pipeline/post-process.ts`)
+  - New sort option that ranks jobs by Power Lead score (0-10)
+  - Prioritizes jobs with low applicant count, recent posting, and listed salary
+  - Integrates existing `computePowerScore()` utility from power-leads.ts
+  - Accessible via sort dropdown in the UI
+  - Helps users quickly identify the highest-opportunity jobs
 
 ## [1.2.0] - 2026-02-07
 

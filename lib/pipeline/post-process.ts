@@ -1,4 +1,5 @@
 import type { Job, CompanySize, SortOption, MatchMode } from '@/types';
+import { computePowerScore } from '@/lib/utils/power-leads';
 
 export interface PostProcessOptions {
   excludeRecruiters: boolean;
@@ -223,6 +224,13 @@ export function applySorting(jobs: Job[], sortBy: SortOption, searchQuery?: stri
       if (searchQuery) {
         sorted.sort((a, b) => keywordScore(b, searchQuery) - keywordScore(a, searchQuery));
       }
+      break;
+    case 'prime-picks':
+      sorted.sort((a, b) => {
+        const scoreA = computePowerScore(a).score;
+        const scoreB = computePowerScore(b).score;
+        return scoreB - scoreA;
+      });
       break;
   }
   return sorted;

@@ -304,7 +304,7 @@ export const DEFAULT_PRESETS: FilterPreset[] = [
 ];
 
 // Sorting
-export type SortOption = 'recent' | 'salary-high' | 'applicants' | 'company-az' | 'relevance';
+export type SortOption = 'recent' | 'salary-high' | 'applicants' | 'company-az' | 'relevance' | 'prime-picks';
 
 export const SORT_CONFIG: Record<SortOption, { label: string }> = {
   'recent':      { label: 'Most Recent' },
@@ -312,6 +312,7 @@ export const SORT_CONFIG: Record<SortOption, { label: string }> = {
   'applicants':  { label: 'Most Applicants' },
   'company-az':  { label: 'Company A-Z' },
   'relevance':   { label: 'Best Match' },
+  'prime-picks': { label: 'Prime Picks' },
 };
 
 // Match mode for keyword filtering
