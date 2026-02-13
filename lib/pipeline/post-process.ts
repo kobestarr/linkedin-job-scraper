@@ -1,4 +1,5 @@
 import type { Job, CompanySize, SortOption, MatchMode } from '@/types';
+import { COMPANY_SIZE_CONFIG } from '@/types';
 import { computePowerScore } from '@/lib/utils/power-leads';
 
 export interface PostProcessOptions {
@@ -27,6 +28,16 @@ const RECRUITER_KEYWORDS = [
   'reed', 'spencer ogden', 'page group', 'pagegroup',
   'hudson', 'antal', 'allegis', 'modis',
 ];
+
+/**
+ * Map employee count to company size category
+ */
+function getCompanySizeCategory(employeeCount: number): CompanySize {
+  if (employeeCount <= COMPANY_SIZE_CONFIG.startup.max) return 'startup';
+  if (employeeCount <= COMPANY_SIZE_CONFIG.smb.max) return 'smb';
+  if (employeeCount <= COMPANY_SIZE_CONFIG.midmarket.max) return 'midmarket';
+  return 'enterprise';
+}
 
 /**
  * Generate a deduplication key from job data.
@@ -132,13 +143,20 @@ export function applyClientFilters(
     );
   }
 
-  // Filter by company size (best-effort: requires enrichment data)
-  // NOTE: Company size filtering requires external enrichment (e.g., Clearbit, Captain Data)
-  // since LinkedIn job listings don't consistently include company size.
-  // This filter is currently a no-op until enrichment is implemented in Phase 2.
+  // Filter by company size (requires enriched company data)
   if (options.companySizes.length > 0) {
-    // Phase 2: Filter based on enriched company data
-    // For now, all jobs pass through since we don't have reliable size data
+    result = result.filter((job) => {
+      // Skip jobs without enrichment data
+      if (!job.companyData || !job.companyData.employeeCount) {
+        return false; // Only show enriched jobs when filtering by size
+      }
+
+      const employeeCount = job.companyData.employeeCount;
+      const companyCategory = getCompanySizeCategory(employeeCount);
+
+      // Include if job's company size matches any of the selected filters
+      return options.companySizes.includes(companyCategory);
+    });
   }
 
   // Match mode keyword filter

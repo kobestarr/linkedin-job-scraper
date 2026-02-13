@@ -6,11 +6,28 @@
  */
 
 import type { Job } from '@/types';
-import type { EnrichmentProvider, EnrichedJob, EnrichmentOptions } from './types';
+import type {
+  EnrichmentProvider,
+  EnrichedJob,
+  EnrichmentOptions,
+  EnrichCompanyOptions,
+  EnrichCompanyResult,
+} from './types';
 
 export class NoopEnrichmentProvider implements EnrichmentProvider {
   readonly id = 'none';
   readonly name = 'No Enrichment';
+
+  async enrichCompany(
+    _options: EnrichCompanyOptions,
+    _signal?: AbortSignal
+  ): Promise<EnrichCompanyResult> {
+    // No-op: return success but no data
+    return {
+      success: true,
+      creditsUsed: 0,
+    };
+  }
 
   async enrichJob(job: Job, _options?: EnrichmentOptions): Promise<EnrichedJob> {
     // Return job as-is, marked as enriched (processed through the enrichment pipeline)

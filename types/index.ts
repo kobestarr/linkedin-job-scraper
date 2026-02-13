@@ -27,6 +27,7 @@ export interface Job {
   isRecruiter?: boolean;
   // Enrichment data (Phase 2)
   enriched?: boolean;
+  companyData?: import('@/lib/providers/enrichment').CompanyEnrichment;
   decisionMakers?: Person[];
 }
 

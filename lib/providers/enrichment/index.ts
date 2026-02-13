@@ -1,37 +1,60 @@
 /**
  * Enrichment Provider Factory
+ *
+ * Returns the configured enrichment provider.
+ * Change NEXT_PUBLIC_ENRICHMENT env var to switch implementations.
  */
 
 import type { EnrichmentProvider } from './types';
-import { NoopEnrichmentProvider } from './noop';
+import { CaptainDataEnrichment } from './captain-data';
+import { MockEnrichment } from './mock';
 
-export type EnrichmentType = 'none' | 'captain-data' | 'clay';
+// Note: 'clay' and other providers can be added in the future
+export type EnrichmentProviderType = 'captain-data' | 'mock' | 'none';
 
-const providers: Record<EnrichmentType, () => EnrichmentProvider> = {
-  none: () => new NoopEnrichmentProvider(),
-  'captain-data': () => {
-    // Phase 2: Implement Captain Data provider
-    throw new Error('Captain Data enrichment provider not yet implemented');
-  },
-  clay: () => {
-    // Phase 2: Implement Clay provider
-    throw new Error('Clay enrichment provider not yet implemented');
-  },
+const providers: Record<
+  Exclude<EnrichmentProviderType, 'none'>,
+  () => EnrichmentProvider
+> = {
+  'captain-data': () => new CaptainDataEnrichment(),
+  'mock': () => new MockEnrichment(),
 };
 
 let instance: EnrichmentProvider | null = null;
 
-export function getEnrichmentProvider(): EnrichmentProvider {
+export function getEnrichmentProvider(): EnrichmentProvider | null {
+  const type = (process.env.NEXT_PUBLIC_ENRICHMENT || 'none') as EnrichmentProviderType;
+
+  // 'none' means no enrichment provider configured
+  if (type === 'none') {
+    return null;
+  }
+
+  // Return cached instance
   if (instance) return instance;
 
-  const type = (process.env.NEXT_PUBLIC_ENRICHMENT || 'none') as EnrichmentType;
-
-  if (!providers[type]) {
+  if (!providers[type as keyof typeof providers]) {
     throw new Error(`Unknown enrichment provider: ${type}`);
   }
 
-  instance = providers[type]();
+  instance = providers[type as keyof typeof providers]();
   return instance;
 }
 
-export { type EnrichmentProvider, type EnrichedJob, type EnrichmentOptions } from './types';
+/**
+ * Check if enrichment is enabled
+ */
+export function isEnrichmentEnabled(): boolean {
+  const type = (process.env.NEXT_PUBLIC_ENRICHMENT || 'none') as EnrichmentProviderType;
+  return type !== 'none';
+}
+
+export { type EnrichmentProvider } from './types';
+export type {
+  CompanyEnrichment,
+  EnrichedJob,
+  EnrichmentOptions,
+  EnrichCompanyOptions,
+  EnrichCompanyResult,
+  CompanySizeRange,
+} from './types';
