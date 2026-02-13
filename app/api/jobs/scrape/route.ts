@@ -3,16 +3,16 @@ import { logger } from '@/lib/logger';
 import type { ScrapeOptions } from '@/lib/providers/data-source/types';
 
 const APIFY_TOKEN = process.env.APIFY_API_TOKEN;
-const ACTOR_ID = process.env.APIFY_ACTOR_ID || '2rJKkhh7vjpX7pvjg'; // Default: cheap_scraper/linkedin-job-scraper
+const ACTOR_ID = process.env.APIFY_ACTOR_ID;
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const action = body.action || 'start';
 
-    if (!APIFY_TOKEN) {
+    if (!APIFY_TOKEN || !ACTOR_ID) {
       return NextResponse.json(
-        { error: 'Data source not configured. Check API keys in environment.' },
+        { error: 'Data source not configured. Check APIFY_API_TOKEN and APIFY_ACTOR_ID in environment.' },
         { status: 503 }
       );
     }

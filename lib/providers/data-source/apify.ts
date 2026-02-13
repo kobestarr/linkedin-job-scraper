@@ -22,12 +22,12 @@ export class ApifyDataSource implements DataSourceProvider {
 
   constructor() {
     this.apiToken = process.env.APIFY_API_TOKEN;
-    this.actorId = process.env.APIFY_ACTOR_ID || '2rJKkhh7vjpX7pvjg';
+    this.actorId = process.env.APIFY_ACTOR_ID || '';
   }
 
   async scrape(options: ScrapeOptions, signal?: AbortSignal): Promise<ScrapeResult> {
-    if (!this.apiToken) {
-      throw new Error('APIFY_API_TOKEN not configured');
+    if (!this.apiToken || !this.actorId) {
+      throw new Error('APIFY_API_TOKEN and APIFY_ACTOR_ID must be configured in environment');
     }
 
     const { jobTitle, location = 'United States', dateRange = 'last24hours', maxResults = 150 } = options;
