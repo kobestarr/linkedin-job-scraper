@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Enrichment strategy** — Revised Phase 2 roadmap from Captain Data-first to staged approach:
+  - Phase 2a: Icypeas ($19/mo) + Crawl4AI (free) together from day one
+  - Phase 2b: Upgrade to Captain Data + Crawl4AI when first paying client (~£1k/mo) covers the cost
+- **PRD v2.1** — Updated architecture, roadmap, and "Not Yet Built" table to reflect new enrichment provider upgrade path
+- **PROVIDERS.md** — Added Icypeas, Captain Data, and Crawl4AI enrichment strategy documentation with pricing and capability details
+
 ### Fixed
 
 - **Missing logger import** — Added missing `logger` import in `hooks/useJobCache.ts`
