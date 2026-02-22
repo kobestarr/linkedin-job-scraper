@@ -8,7 +8,7 @@ The platform uses a provider pattern to abstract all external services. Each pro
 |----------|-----------|---------|-------------|
 | **Data Source** | `DataSourceProvider` | Apify | Captain Data, Mock |
 | **Storage** | `StorageProvider` | localStorage | Supabase |
-| **Enrichment** | `EnrichmentProvider` | None (noop) | Icypeas + Crawl4AI (Phase 2a), Captain Data + Crawl4AI (Phase 2b) |
+| **Enrichment** | `EnrichmentProvider` | None (noop) | Icypeas + Crawl4AI + Reoon (Phase 2), Captain Data upgrade (revenue-triggered) |
 | **Outreach** | `OutreachProvider` | CSV Export | Smartlead, Instantly |
 
 ## Switching Providers
@@ -157,11 +157,19 @@ interface OutreachProvider {
 
 ## Enrichment Provider Strategy
 
-The enrichment layer follows a staged upgrade path based on revenue:
+The enrichment pipeline combines free and low-cost tools. Captain Data is a revenue-triggered upgrade (env var flip).
 
-### Phase 2a — Pre-Revenue (Icypeas + Crawl4AI together)
+### Pipeline
+```
+Icypeas (find) → Reoon (verify) → Crawl4AI (deep data) → store
+```
 
-**Icypeas** ($19/mo, 1,000 credits):
+### Reoon — Email Verification (free lifetime deal)
+- Verifies all enriched emails before storage/outreach
+- Runs at every stage, including after Captain Data upgrade
+- Configured via `REOON_API_KEY` env var
+
+### Icypeas — B2B Contact & Company Data ($19/mo)
 - **Email Finder**: 1 credit per verified email (<2.5% bounce rate)
 - **Company Scraper**: 0.5 credits per company profile
 - **Profile Scraper**: 1.5 credits per LinkedIn profile
@@ -169,18 +177,18 @@ The enrichment layer follows a staged upgrade path based on revenue:
 - API access included on all plans
 - Pay-per-result model: only charged for verified data
 
-**Crawl4AI** (free, runs alongside Icypeas from day one):
-- Open-source Python crawler deployed as Docker sidecar (REST API on port 11235)
-- Crawls company websites for data not available in B2B databases
+### Crawl4AI — Deep Company Enrichment (free, open-source)
+- Python crawler deployed as Docker sidecar (REST API on port 11235)
+- Crawls company websites for data not in B2B databases
 - Tech stack detection, team page extraction, job description deep analysis
 - LLM-driven structured extraction from unstructured pages
 - No per-query cost (aside from optional LLM calls for extraction)
 
-### Phase 2b — First Paying Client (Captain Data + Crawl4AI)
-Upgrade Icypeas → Captain Data (~$399/mo, subsidized by ~£1k/mo client revenue):
-- **Waterfall enrichment**: cascades through multiple sources (including Icypeas) for higher find rates
+### Captain Data — Revenue-Triggered Upgrade (~$399/mo)
+When first paying client (~£1k/mo) covers the cost:
+- **Waterfall enrichment**: cascades through 6 sources (Icypeas, Dropcontact, Hunter, Prospeo, Findymail, Datagma)
 - **LinkedIn automation**: org charts, employee search, chained workflows
 - **Richer firmographic data**: funding, growth signals, tech stack
 - Existing provider implementation already built (`lib/providers/enrichment/captain-data.ts`)
 - Switch by changing `NEXT_PUBLIC_ENRICHMENT=captain-data`
-- Crawl4AI continues as supplementary deep enrichment at this stage
+- Reoon and Crawl4AI continue alongside Captain Data

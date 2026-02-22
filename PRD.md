@@ -84,16 +84,17 @@ Product‑as‑a‑Service with a high‑spec setup fee plus ongoing service. De
 
 | Feature | Target | Notes |
 |---------|--------|-------|
-| Company enrichment (Icypeas) | Phase 2a | Low-cost email/company data ($19/mo) |
-| Deep enrichment (Crawl4AI) | Phase 2a | Free — company websites, tech stack, team pages |
-| Decision-Maker Leads | Phase 2a | Icypeas emails + Crawl4AI team page extraction |
-| CSV/CRM export | Phase 2a | SelectionBar buttons wired, backend pending |
-| Cost guardrails | Phase 2a | Credit caps, usage meters |
-| Upgrade to Captain Data | Phase 2b | Flip when first paying client (~£1k/mo) covers cost |
-| Auth/multi-user | Phase 2b | Provider choice TBD |
-| Saved searches | Phase 2b | |
-| Notes per job | Phase 2b | |
-| Analytics dashboard | Phase 2b | |
+| Email verification (Reoon) | Phase 2 | Free lifetime deal — verify all enriched emails |
+| Deep enrichment (Crawl4AI) | Phase 2 | Free — company websites, tech stack, team pages |
+| Company enrichment (Icypeas) | Phase 2 | Low-cost email/company data ($19/mo) |
+| Decision-Maker Leads | Phase 2 | Icypeas emails + Crawl4AI team page extraction |
+| CSV/CRM export | Phase 2 | SelectionBar buttons wired, backend pending |
+| Cost guardrails | Phase 2 | Credit caps, usage meters |
+| Captain Data upgrade | Phase 2 | Flip env var when first paying client (~£1k/mo) covers cost |
+| Auth/multi-user | Phase 2 | Provider choice TBD |
+| Saved searches | Phase 2 | |
+| Notes per job | Phase 2 | |
+| Analytics dashboard | Phase 2 | |
 
 ---
 
@@ -104,7 +105,7 @@ Product‑as‑a‑Service with a high‑spec setup fee plus ongoing service. De
 - Provider Layer (swappable sources)
 - Data Source: Apify start/poll streaming (actor `2rJKkhh7vjpX7pvjg`)
 - Storage: localStorage cache (MVP) → SQLite/Postgres (future)
-- Enrichment: Icypeas + Crawl4AI (Phase 2a, pre-revenue) → Captain Data + Crawl4AI (Phase 2b, first paying client)
+- Enrichment: Icypeas + Crawl4AI + Reoon (Phase 2) → Captain Data + Crawl4AI + Reoon (when first paying client covers cost)
 - Outreach: CSV export (Phase 2), LLM email generation (Phase 2)
 - State: Zustand with localStorage persistence (version-migrated)
 - Pipeline: Post-process → client filters → sorting (all client-side, instant)
@@ -275,46 +276,43 @@ Identify the most relevant hiring decision‑makers for each role.
 
 ---
 
-## 9. Phase 2 Roadmap
+## 9. Phase 2 Roadmap — Enrichment Pipeline
 
-### Phase 2a — Pre-Revenue (Bootstrap, Icypeas + Crawl4AI)
-Both providers run from day one — Icypeas for structured B2B data, Crawl4AI for free deep crawling:
+All enrichment work is a single phase. The pipeline combines free and low-cost tools from day one, with Captain Data as a revenue-triggered upgrade (env var flip, no code changes).
 
-**Icypeas** ($19/mo, 1,000 credits):
-1. Company enrichment — firmographic data (size, industry, HQ) at 0.5 credits/company
-2. Decision‑Maker email finding — verified emails at 1 credit/email
-3. Profile scraping — LinkedIn profile data at 1.5 credits/profile
+### Enrichment Pipeline
+```
+Icypeas (find email/company data) → Reoon (verify email) → Crawl4AI (deep company data) → store
+```
+
+### Providers
+
+**Reoon** (free lifetime deal):
+- Email verification on all enriched contacts
+- Runs at every stage, including after Captain Data upgrade
 
 **Crawl4AI** (free, open-source Docker sidecar):
-4. Company website crawling — tech stack detection, culture signals, recent news
-5. Team/about page extraction — org structure beyond LinkedIn data
-6. Deep job description analysis — full posting content beyond Apify summaries
+- Company website crawling — tech stack, culture signals, recent news
+- Team/about page extraction — org structure beyond LinkedIn data
+- Deep job description analysis — full posting content beyond Apify summaries
 
-**Shared:**
-7. CSV export — wire up existing SelectionBar buttons
-8. Cost guardrails — credit caps and usage tracking (critical at low budget)
+**Icypeas** ($19/mo, 1,000 credits):
+- Email finding — 1 credit per verified email
+- Company scraping — 0.5 credits per company profile
+- Profile scraping — 1.5 credits per LinkedIn profile
 
-### Phase 2b — First Paying Client (~£1k/mo revenue)
-Upgrade to **Captain Data** (~$399/mo, subsidized by client revenue):
-1. Waterfall enrichment — cascading multi-source lookups for higher find rates
-2. Full Decision‑Maker Leads pipeline — Sales Navigator-style employee search
-3. LinkedIn automation workflows — org chart extraction, chained pipelines
-4. Multi‑tenant settings and auth
-5. Outreach — LLM‑generated emails, Smartlead/Instantly integration
-6. Crawl4AI continues as supplementary deep enrichment alongside Captain Data
+### Additional Features
+- CSV export — wire up existing SelectionBar buttons
+- Cost guardrails — credit caps, usage meters, pre-enrichment estimates
+- Decision-Maker Leads — Icypeas emails + Crawl4AI team page extraction
+- Auth/multi-user, saved searches, notes, analytics dashboard
 
-### Phase 2c — Advanced UX
-1. Saved searches
-2. Notes per job
-3. Analytics dashboard
-
-### Enrichment Provider Upgrade Path
-```
-Pre-revenue                  →  First paying client
-Icypeas ($19) + Crawl4AI     →  Captain Data ($399) + Crawl4AI
-env: icypeas + docker sidecar → env: captain-data + docker sidecar
-```
-The provider architecture supports this via a single env var change — no code modifications needed. Crawl4AI runs as a complementary sidecar at all stages.
+### Captain Data Upgrade (Revenue-Triggered)
+When first paying client (~£1k/mo) covers the cost, upgrade Icypeas → Captain Data (~$399/mo):
+- Waterfall enrichment — cascades through 6 sources (Icypeas, Dropcontact, Hunter, Prospeo, Findymail, Datagma)
+- LinkedIn automation — org charts, employee search, chained workflows
+- Switch by changing `NEXT_PUBLIC_ENRICHMENT=captain-data`
+- Reoon and Crawl4AI continue alongside Captain Data
 
 ---
 
