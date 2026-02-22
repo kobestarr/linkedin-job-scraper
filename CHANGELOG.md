@@ -7,13 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Reoon Email Verification Provider** (`lib/providers/verification/`)
+  - New provider category: `EmailVerificationProvider` with single + batch verify
+  - Reoon API client: single email (quick/power mode), bulk (up to 50k), balance check
+  - Factory with `NEXT_PUBLIC_EMAIL_VERIFICATION` env var
+  - Pipeline position: Icypeas (find) → **Reoon (verify)** → Crawl4AI (deep data) → store
+
 ### Changed
 
 - **Enrichment strategy** — Revised Phase 2 enrichment pipeline:
   - Single Phase 2: Icypeas ($19/mo) + Crawl4AI (free) + Reoon (free lifetime deal) from day one
   - Captain Data (~$399/mo) as revenue-triggered env var upgrade when first paying client (~£1k/mo) covers cost
 - **PRD v2.1** — Updated architecture, roadmap, and enrichment pipeline to reflect flat Phase 2 with Reoon email verification
-- **PROVIDERS.md** — Added enrichment provider strategy with pipeline diagram and all provider details
+- **PROVIDERS.md** — Added enrichment provider strategy with pipeline diagram, verification provider category
 
 ### Fixed
 

@@ -9,6 +9,7 @@ The platform uses a provider pattern to abstract all external services. Each pro
 | **Data Source** | `DataSourceProvider` | Apify | Captain Data, Mock |
 | **Storage** | `StorageProvider` | localStorage | Supabase |
 | **Enrichment** | `EnrichmentProvider` | None (noop) | Icypeas + Crawl4AI + Reoon (Phase 2), Captain Data upgrade (revenue-triggered) |
+| **Verification** | `EmailVerificationProvider` | None | Reoon (free lifetime deal) |
 | **Outreach** | `OutreachProvider` | CSV Export | Smartlead, Instantly |
 
 ## Switching Providers
@@ -19,6 +20,7 @@ Set the corresponding environment variable:
 NEXT_PUBLIC_DATA_SOURCE=mock      # 'apify' | 'captain-data' | 'mock'
 NEXT_PUBLIC_STORAGE=local         # 'local' | 'supabase'
 NEXT_PUBLIC_ENRICHMENT=none       # 'none' | 'icypeas' | 'captain-data' | 'crawl4ai'
+NEXT_PUBLIC_EMAIL_VERIFICATION=none # 'none' | 'reoon'
 NEXT_PUBLIC_OUTREACH=csv          # 'csv' | 'smartlead' | 'instantly'
 ```
 

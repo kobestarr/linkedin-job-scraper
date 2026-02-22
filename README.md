@@ -19,23 +19,25 @@ To use real LinkedIn data, set `NEXT_PUBLIC_DATA_SOURCE=apify` and add your `API
 ## Architecture
 
 ```
-                    ┌─────────────┐
-                    │   Next.js   │
-                    │  Dashboard  │
-                    └──────┬──────┘
-                           │
-              ┌────────────┼────────────┐
-              │            │            │
-        ┌─────┴─────┐ ┌───┴───┐ ┌─────┴─────┐
-        │ DataSource │ │Storage│ │ Outreach  │
-        │  Provider  │ │Provider│ │ Provider  │
-        └─────┬─────┘ └───┬───┘ └─────┬─────┘
-              │            │            │
-        ┌─────┴─────┐ ┌───┴───┐ ┌─────┴─────┐
-        │Apify│Mock │ │Local  │ │CSV│Smart- │
-        │     │     │ │Storage│ │   │lead   │
-        └───────────┘ └───────┘ └───────────┘
+                         ┌─────────────┐
+                         │   Next.js   │
+                         │  Dashboard  │
+                         └──────┬──────┘
+                                │
+         ┌──────────┬───────────┼───────────┬──────────┐
+         │          │           │           │          │
+   ┌─────┴────┐ ┌───┴───┐ ┌────┴────┐ ┌────┴───┐ ┌───┴─────┐
+   │DataSource│ │Storage│ │Enrichmt │ │Verify  │ │Outreach │
+   │ Provider │ │Providr│ │Provider │ │Provider│ │Provider │
+   └─────┬────┘ └───┬───┘ └────┬────┘ └────┬───┘ └───┬─────┘
+         │          │           │           │          │
+   ┌─────┴────┐ ┌───┴───┐ ┌────┴────┐ ┌────┴───┐ ┌───┴─────┐
+   │Apify|Mock│ │Local  │ │Icypeas |│ │Reoon   │ │CSV|Smart│
+   │          │ │Storage│ │Capt.Data│ │(free)  │ │lead     │
+   └──────────┘ └───────┘ └─────────┘ └────────┘ └─────────┘
 ```
+
+**Enrichment Pipeline:** `Icypeas (find) → Reoon (verify) → Crawl4AI (deep data) → store`
 
 Swap any provider by changing an env var. See [docs/PROVIDERS.md](docs/PROVIDERS.md).
 

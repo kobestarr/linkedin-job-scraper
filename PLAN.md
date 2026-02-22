@@ -1,6 +1,6 @@
 # Phase 2: Enrichment Pipeline Implementation Plan
 
-**Overall Progress:** `22%`
+**Overall Progress:** `33%`
 
 ## TLDR
 Add enrichment to the job intelligence platform using a pipeline of free and low-cost providers: Crawl4AI (free) for deep company website crawling, Icypeas ($19/mo) for B2B email/company data, and Reoon (free lifetime deal) for email verification. Captain Data upgrade comes later when first paying client (~£1k/mo) covers the cost. CSV export and cost guardrails round out the phase.
@@ -27,13 +27,13 @@ Add enrichment to the job intelligence platform using a pipeline of free and low
   - [x] 🟩 Update CHANGELOG — reflect simplified phasing
   - [x] 🟩 Commit and push
 
-- [ ] 🟥 **Step 3: Reoon email verification provider**
-  - [ ] 🟥 Research Reoon API docs (endpoints, auth, request/response format)
-  - [ ] 🟥 Create `lib/providers/verification/types.ts` — `EmailVerificationProvider` interface
-  - [ ] 🟥 Create `lib/providers/verification/reoon.ts` — implement Reoon API client
-  - [ ] 🟥 Create `lib/providers/verification/index.ts` — factory with env var `NEXT_PUBLIC_EMAIL_VERIFICATION`
-  - [ ] 🟥 Add `REOON_API_KEY` to `.env.example`
-  - [ ] 🟥 Commit and push
+- [x] 🟩 **Step 3: Reoon email verification provider**
+  - [x] 🟩 Research Reoon API docs (endpoints, auth, request/response format)
+  - [x] 🟩 Create `lib/providers/verification/types.ts` — `EmailVerificationProvider` interface
+  - [x] 🟩 Create `lib/providers/verification/reoon.ts` — implement Reoon API client
+  - [x] 🟩 Create `lib/providers/verification/index.ts` — factory with env var `NEXT_PUBLIC_EMAIL_VERIFICATION`
+  - [x] 🟩 Add `REOON_API_KEY` to `.env.example`
+  - [x] 🟩 Commit and push
 
 - [ ] 🟥 **Step 4: Crawl4AI deep enrichment provider**
   - [ ] 🟥 Create Docker Compose config for Crawl4AI sidecar (port 11235)
