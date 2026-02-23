@@ -7,16 +7,17 @@
 
 import type { EnrichmentProvider } from './types';
 import { CaptainDataEnrichment } from './captain-data';
+import { Crawl4AIEnrichment } from './crawl4ai';
 import { MockEnrichment } from './mock';
 
-// Note: 'clay' and other providers can be added in the future
-export type EnrichmentProviderType = 'captain-data' | 'mock' | 'none';
+export type EnrichmentProviderType = 'captain-data' | 'crawl4ai' | 'mock' | 'none';
 
 const providers: Record<
   Exclude<EnrichmentProviderType, 'none'>,
   () => EnrichmentProvider
 > = {
   'captain-data': () => new CaptainDataEnrichment(),
+  'crawl4ai': () => new Crawl4AIEnrichment(),
   'mock': () => new MockEnrichment(),
 };
 

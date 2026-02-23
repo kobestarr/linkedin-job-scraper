@@ -1,0 +1,35 @@
+# Docker Compose — Job Intelligence Platform + Crawl4AI Sidecar
+#
+# Usage:
+#   docker compose up -d          # Start all services
+#   docker compose up crawl4ai -d # Start only Crawl4AI sidecar
+#
+# The Next.js app can run locally (npm run dev) or via Docker.
+# Crawl4AI runs as a sidecar on port 11235.
+
+services:
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    depends_on:
+      - crawl4ai
+    profiles:
+      - full  # Only start with: docker compose --profile full up
+
+  crawl4ai:
+    image: unclecode/crawl4ai:latest
+    ports:
+      - "11235:11235"
+    shm_size: 1g
+    restart: unless-stopped
+    environment:
+      - CRAWL4AI_API_TOKEN=${CRAWL4AI_API_TOKEN:-}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11235/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
