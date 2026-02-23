@@ -35,7 +35,8 @@ Add enrichment to the job intelligence platform using a pipeline of free and low
   - [x] 🟩 Add `REOON_API_KEY` to `.env.example`
   - [x] 🟩 Commit and push
 
-- [ ] 🟥 **Step 4: Crawl4AI deep enrichment provider**
+- [ ] 🟨 **Step 4: Crawl4AI deep enrichment provider** *(API researched, ready to build)*
+  - [x] 🟩 Research Crawl4AI REST API (endpoints, Docker config, extraction strategies)
   - [ ] 🟥 Create Docker Compose config for Crawl4AI sidecar (port 11235)
   - [ ] 🟥 Create `lib/providers/enrichment/crawl4ai.ts` — REST API client for company website crawling
   - [ ] 🟥 Implement company data extraction (tech stack, team pages, description)

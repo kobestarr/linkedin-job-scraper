@@ -26,9 +26,17 @@ LinkedIn Job Intelligence Platform — a premium, white-label SaaS for recruitme
 Icypeas (find email) → Reoon (verify) → Crawl4AI (deep data) → store
 ```
 - **Reoon:** Free lifetime deal, email verification — provider built, not yet wired
-- **Icypeas:** $19/mo, B2B email/company data — provider not yet built
-- **Crawl4AI:** Free open-source Docker sidecar — provider not yet built
+- **Icypeas:** $19/mo, B2B email/company data — provider not yet built, API key ready
+- **Crawl4AI:** Free Docker sidecar (port 11235) — API researched, provider not yet built
 - **Captain Data:** ~$399/mo upgrade when first paying client covers cost — provider already built
+
+## Crawl4AI Integration Notes
+- Docker: `unclecode/crawl4ai:latest`, port 11235, needs `--shm-size=1g`
+- REST API: `POST /crawl` with `urls[]`, `browser_config`, `crawler_config`
+- Use markdown output + regex for company data extraction (no LLM cost)
+- Extraction strategies: `JsonCssExtractionStrategy` (CSS selectors) or `LLMExtractionStrategy` (semantic)
+- Response fields: `markdown`, `extracted_content`, `links`, `media`, `success`
+- No `docker-compose.yml` yet — Step 4 creates one
 
 ## Key Files
 - `PRD.md` — Product requirements and Phase 2 roadmap
