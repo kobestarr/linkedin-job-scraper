@@ -1,6 +1,6 @@
 # Phase 2: Enrichment Pipeline Implementation Plan
 
-**Overall Progress:** `33%`
+**Overall Progress:** `56%`
 
 ## TLDR
 Add enrichment to the job intelligence platform using a pipeline of free and low-cost providers: Crawl4AI (free) for deep company website crawling, Icypeas ($19/mo) for B2B email/company data, and Reoon (free lifetime deal) for email verification. Captain Data upgrade comes later when first paying client (~£1k/mo) covers the cost. CSV export and cost guardrails round out the phase.
@@ -35,24 +35,24 @@ Add enrichment to the job intelligence platform using a pipeline of free and low
   - [x] 🟩 Add `REOON_API_KEY` to `.env.example`
   - [x] 🟩 Commit and push
 
-- [ ] 🟨 **Step 4: Crawl4AI deep enrichment provider** *(API researched, ready to build)*
+- [x] 🟩 **Step 4: Crawl4AI deep enrichment provider**
   - [x] 🟩 Research Crawl4AI REST API (endpoints, Docker config, extraction strategies)
-  - [ ] 🟥 Create Docker Compose config for Crawl4AI sidecar (port 11235)
-  - [ ] 🟥 Create `lib/providers/enrichment/crawl4ai.ts` — REST API client for company website crawling
-  - [ ] 🟥 Implement company data extraction (tech stack, team pages, description)
-  - [ ] 🟥 Map crawled data to existing `CompanyEnrichment` interface
-  - [ ] 🟥 Register in enrichment factory (`index.ts`)
-  - [ ] 🟥 Commit and push
+  - [x] 🟩 Create Docker Compose config for Crawl4AI sidecar (port 11235)
+  - [x] 🟩 Create `lib/providers/enrichment/crawl4ai.ts` — REST API client for company website crawling
+  - [x] 🟩 Implement company data extraction (tech stack, team pages, description)
+  - [x] 🟩 Map crawled data to existing `CompanyEnrichment` interface
+  - [x] 🟩 Register in enrichment factory (`index.ts`)
+  - [x] 🟩 Commit and push
 
-- [ ] 🟥 **Step 5: Icypeas enrichment provider**
-  - [ ] 🟥 Research Icypeas API docs (endpoints, auth, credit usage, response format)
-  - [ ] 🟥 Create `lib/providers/enrichment/icypeas.ts` — implement `EnrichmentProvider` interface
-  - [ ] 🟥 Implement email finder (1 credit), company scraper (0.5 credits), profile scraper (1.5 credits)
-  - [ ] 🟥 Add `getCredits()` for credit balance tracking
-  - [ ] 🟥 Map Icypeas response to `CompanyEnrichment` interface
-  - [ ] 🟥 Register in enrichment factory (`index.ts`)
-  - [ ] 🟥 Add `ICYPEAS_API_KEY` to `.env.example`
-  - [ ] 🟥 Commit and push
+- [x] 🟩 **Step 5: Icypeas enrichment provider**
+  - [x] 🟩 Research Icypeas API docs (endpoints, auth, credit usage, response format)
+  - [x] 🟩 Create `lib/providers/enrichment/icypeas.ts` — implement `EnrichmentProvider` interface
+  - [x] 🟩 Implement email finder (1 credit), company scraper (0.5 credits), domain search (1 credit)
+  - [x] 🟩 Add `getCredits()` for credit balance tracking
+  - [x] 🟩 Map Icypeas response to `CompanyEnrichment` interface
+  - [x] 🟩 Register in enrichment factory (`index.ts`)
+  - [x] 🟩 `ICYPEAS_API_KEY` already in `.env.example`
+  - [x] 🟩 Commit and push
 
 - [ ] 🟥 **Step 6: Wire enrichment pipeline end-to-end**
   - [ ] 🟥 Enrichment flow: Icypeas (find email) → Reoon (verify) → Crawl4AI (deep data) → store enriched job
