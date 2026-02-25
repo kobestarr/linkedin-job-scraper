@@ -8,7 +8,7 @@ The platform uses a provider pattern to abstract all external services. Each pro
 |----------|-----------|---------|-------------|
 | **Data Source** | `DataSourceProvider` | Apify | Captain Data, Mock |
 | **Storage** | `StorageProvider` | localStorage | Supabase |
-| **Enrichment** | `EnrichmentProvider` | None (noop) | Icypeas + Crawl4AI + Reoon (Phase 2), Captain Data upgrade (revenue-triggered) |
+| **Enrichment** | `EnrichmentProvider` | None (noop) | Icypeas, Crawl4AI, Captain Data (all built) |
 | **Verification** | `EmailVerificationProvider` | None | Reoon (free lifetime deal) |
 | **Outreach** | `OutreachProvider` | CSV Export | Smartlead, Instantly |
 
@@ -19,7 +19,7 @@ Set the corresponding environment variable:
 ```bash
 NEXT_PUBLIC_DATA_SOURCE=mock      # 'apify' | 'captain-data' | 'mock'
 NEXT_PUBLIC_STORAGE=local         # 'local' | 'supabase'
-NEXT_PUBLIC_ENRICHMENT=none       # 'none' | 'icypeas' | 'captain-data' | 'crawl4ai'
+NEXT_PUBLIC_ENRICHMENT=none       # 'none' | 'icypeas' | 'captain-data' | 'crawl4ai' | 'mock'
 NEXT_PUBLIC_EMAIL_VERIFICATION=none # 'none' | 'reoon'
 NEXT_PUBLIC_OUTREACH=csv          # 'csv' | 'smartlead' | 'instantly'
 ```
@@ -159,12 +159,35 @@ interface OutreachProvider {
 
 ## Enrichment Provider Strategy
 
-The enrichment pipeline combines free and low-cost tools. Captain Data is a revenue-triggered upgrade (env var flip).
+All enrichment providers are built and registered. The pipeline combines free and low-cost tools. Captain Data is a revenue-triggered upgrade (env var flip).
 
 ### Pipeline
 ```
 Icypeas (find) → Reoon (verify) → Crawl4AI (deep data) → store
 ```
+
+### Implementation Files
+
+| Provider | File | Status |
+|----------|------|--------|
+| Icypeas | `lib/providers/enrichment/icypeas.ts` | Built |
+| Crawl4AI | `lib/providers/enrichment/crawl4ai.ts` | Built |
+| Captain Data | `lib/providers/enrichment/captain-data.ts` | Built |
+| Mock | `lib/providers/enrichment/mock.ts` | Built |
+| Reoon | `lib/providers/verification/reoon.ts` | Built |
+
+### Supporting Infrastructure
+
+| Component | File | Purpose |
+|-----------|------|---------|
+| Enrichment API | `app/api/jobs/enrich/route.ts` | POST handler with credit check |
+| Credits API | `app/api/credits/route.ts` | GET balance from provider |
+| Enrichment store | `stores/useEnrichmentStore.ts` | Zustand with progress + credits |
+| Enrichment hook | `hooks/useEnrichment.ts` | React hook with cancellation |
+| Credit balance hook | `hooks/useCreditBalance.ts` | Fetch balance on mount |
+| CSV export | `lib/utils/csv-export.ts` | 27-column client-side download |
+| Cost config | `lib/config/usage-limits.ts` | Credits per provider, monthly cap |
+| Credit meter | `components/dashboard/CreditMeter.tsx` | Header usage bar |
 
 ### Reoon — Email Verification (free lifetime deal)
 - Verifies all enriched emails before storage/outreach
@@ -174,23 +197,21 @@ Icypeas (find) → Reoon (verify) → Crawl4AI (deep data) → store
 ### Icypeas — B2B Contact & Company Data ($19/mo)
 - **Email Finder**: 1 credit per verified email (<2.5% bounce rate)
 - **Company Scraper**: 0.5 credits per company profile
+- **Domain Search**: 1 credit per domain
 - **Profile Scraper**: 1.5 credits per LinkedIn profile
-- 1,000 credits/mo on the Basic plan (~2,000 companies or ~1,000 emails)
-- API access included on all plans
-- Pay-per-result model: only charged for verified data
+- 1,000 credits/mo on the Basic plan
+- Async polling pattern: launch → poll until DEBITED (2s intervals)
 
 ### Crawl4AI — Deep Company Enrichment (free, open-source)
-- Python crawler deployed as Docker sidecar (REST API on port 11235)
-- Crawls company websites for data not in B2B databases
-- Tech stack detection, team page extraction, job description deep analysis
-- LLM-driven structured extraction from unstructured pages
-- No per-query cost (aside from optional LLM calls for extraction)
+- Docker sidecar on port 11235 (`docker-compose.yml`)
+- REST API: `POST /crawl` with markdown output
+- Regex-based extraction: description, tech stack, tagline, specialties, HQ, phone
+- No LLM cost — parses markdown directly
+- Batch enrichment with concurrency=3
 
 ### Captain Data — Revenue-Triggered Upgrade (~$399/mo)
 When first paying client (~£1k/mo) covers the cost:
-- **Waterfall enrichment**: cascades through 6 sources (Icypeas, Dropcontact, Hunter, Prospeo, Findymail, Datagma)
+- **Waterfall enrichment**: cascades through 6 sources
 - **LinkedIn automation**: org charts, employee search, chained workflows
-- **Richer firmographic data**: funding, growth signals, tech stack
-- Existing provider implementation already built (`lib/providers/enrichment/captain-data.ts`)
 - Switch by changing `NEXT_PUBLIC_ENRICHMENT=captain-data`
 - Reoon and Crawl4AI continue alongside Captain Data

@@ -5,31 +5,65 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [2.0.0] - 2026-02-25
 
-### Added
+### Added — Phase 2: Enrichment Pipeline
+
+- **Crawl4AI Deep Enrichment Provider** (`lib/providers/enrichment/crawl4ai.ts`)
+  - Docker sidecar on port 11235 (`docker-compose.yml`)
+  - REST API client: `POST /crawl` with markdown output
+  - Regex-based extraction: description, tech stack, tagline, specialties, headquarters, phone
+  - No LLM cost — parses markdown directly
+  - Batch enrichment with concurrency=3
+
+- **Icypeas Enrichment Provider** (`lib/providers/enrichment/icypeas.ts`)
+  - Email finder (1 credit), company scraper (0.5 credits), domain search (1 credit)
+  - Async polling pattern: launch → poll until DEBITED (2s intervals, max 60s)
+  - Credit balance tracking via `getCredits()`
+  - Maps to `CompanyEnrichment` interface
+
+- **Enrichment Pipeline Wiring** (Step 6)
+  - `app/api/jobs/enrich/route.ts` — POST handler with pre-flight credit check (402 if insufficient)
+  - `stores/useEnrichmentStore.ts` — Zustand store with progress tracking and credit balance
+  - `hooks/useEnrichment.ts` — React hook with AbortController cancellation
+  - Enrichment badges on job cards (yellow "Enriching", green "Enriched")
+  - Merged enrichment results into job data in `app/page.tsx`
+
+- **CSV Export** (`lib/utils/csv-export.ts`)
+  - Client-side CSV generation with 27 columns (job + enrichment fields)
+  - "Export CSV" button in SelectionBar — browser download, no API needed
+  - Includes: industry, website, employees, technologies, decision makers, etc.
+
+- **Cost Guardrails** (Step 8)
+  - `lib/config/usage-limits.ts` — credit costs per provider, monthly cap, threshold levels
+  - `app/api/credits/route.ts` — GET endpoint for provider credit balance
+  - `components/dashboard/CreditMeter.tsx` — color-coded usage bar in header (ok/warning/high/critical)
+  - Pre-enrichment cost confirmation in SelectionBar ("~N credits" before confirming)
+  - Enrichment blocked at critical threshold (95%+ of monthly cap)
+  - `NEXT_PUBLIC_MONTHLY_CREDIT_CAP` env var (default: 500)
+
+- **Decision-Maker Leads Display** (Step 9)
+  - Company Intel section in JobDetailPanel: industry, HQ, employees, tech stack, specialties, website
+  - Decision Makers section: avatar, title, email (clickable), phone, LinkedIn link
+  - Green "Verified" badge on emails (Reoon verification status)
 
 - **Reoon Email Verification Provider** (`lib/providers/verification/`)
-  - New provider category: `EmailVerificationProvider` with single + batch verify
+  - `EmailVerificationProvider` interface with single + batch verify
   - Reoon API client: single email (quick/power mode), bulk (up to 50k), balance check
   - Factory with `NEXT_PUBLIC_EMAIL_VERIFICATION` env var
-  - Pipeline position: Icypeas (find) → **Reoon (verify)** → Crawl4AI (deep data) → store
 
 ### Changed
 
-- **Enrichment strategy** — Revised Phase 2 enrichment pipeline:
-  - Single Phase 2: Icypeas ($19/mo) + Crawl4AI (free) + Reoon (free lifetime deal) from day one
-  - Captain Data (~$399/mo) as revenue-triggered env var upgrade when first paying client (~£1k/mo) covers cost
-- **PRD v2.1** — Updated architecture, roadmap, and enrichment pipeline to reflect flat Phase 2 with Reoon email verification
-- **PROVIDERS.md** — Added enrichment provider strategy with pipeline diagram, verification provider category
+- **Enrichment strategy** — Full pipeline: Icypeas → Reoon → Crawl4AI → store
+- **SelectionBar** — "Enrich Selected" and "Export CSV" buttons now functional
+- **PRD v3.0** — Updated to reflect Phase 2 completion
+- **Provider table** — All enrichment providers now built and registered
 
 ### Fixed
 
 - **Missing logger import** — Added missing `logger` import in `hooks/useJobCache.ts`
-- **Animation ref cleanup** — Reset `prevTimeRef` in `SearchLoadingState` on animation start to prevent time jump issues
-- **Deterministic ID generation** — Replaced `Math.random()` in `ApifyDataSource` with deterministic `company-title-date` composite ID
-- **Code cleanup** — Simplified placeholder comment in company size filter (removed commented-out code)
-- **Documentation** — Added inline comment documenting default Apify actor ID purpose
+- **Animation ref cleanup** — Reset `prevTimeRef` in `SearchLoadingState` on animation start
+- **Deterministic ID generation** — Replaced `Math.random()` with deterministic composite ID
 
 ## [1.3.0] - 2026-02-13
 
@@ -350,7 +384,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Retry logic with exponential backoff
   - Scheduler with cron support for automated runs
 
-[Unreleased]: https://github.com/kobestarr/linkedin-job-scraper/compare/v1.2.0...HEAD
+[2.0.0]: https://github.com/kobestarr/linkedin-job-scraper/compare/v1.3.0...v2.0.0
+[Unreleased]: https://github.com/kobestarr/linkedin-job-scraper/compare/v2.0.0...HEAD
 [1.2.0]: https://github.com/kobestarr/linkedin-job-scraper/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/kobestarr/linkedin-job-scraper/compare/v1.0.1...v1.1.0
 [1.0.1]: https://github.com/kobestarr/linkedin-job-scraper/compare/v1.0.0...v1.0.1

@@ -1,8 +1,8 @@
 # LinkedIn Job Intelligence Platform — Product Requirements Document (PRD)
 
-**Version:** 2.1 (Enrichment Strategy Update)
-**Last Updated:** February 22, 2026
-**Status:** Slice 6 Complete (v1.3.0) — Prime Picks, Provider Architecture, Enrichment Strategy
+**Version:** 3.0 (Phase 2 Complete)
+**Last Updated:** February 25, 2026
+**Status:** Phase 2 Complete — Full enrichment pipeline, CSV export, cost guardrails, decision-maker leads
 
 ---
 
@@ -80,21 +80,30 @@ Product‑as‑a‑Service with a high‑spec setup fee plus ongoing service. De
 | Auto-refresh | DONE | 30m / 1h / 2h / 4h intervals |
 | Result caching | DONE | localStorage, last 200 jobs |
 
+### Completed (Phase 2 — Enrichment Pipeline)
+
+| Feature | Status | Notes |
+|---------|--------|-------|
+| Reoon email verification provider | DONE | Free lifetime deal, single + batch verify |
+| Crawl4AI deep enrichment provider | DONE | Docker sidecar, regex extraction from markdown |
+| Icypeas enrichment provider | DONE | Email finder, company scraper, domain search |
+| Enrichment pipeline wiring | DONE | API route, Zustand store, React hook, badges |
+| CSV export | DONE | Client-side, 27 columns, enrichment fields included |
+| Cost guardrails | DONE | Credit meter, pre-enrichment confirmation, monthly cap |
+| Decision-Maker Leads display | DONE | Company Intel + contacts in detail panel |
+| Captain Data provider | DONE | Ready for env var flip when revenue justifies |
+
 ### Not Yet Built
 
 | Feature | Target | Notes |
 |---------|--------|-------|
-| Email verification (Reoon) | Phase 2 | Free lifetime deal — verify all enriched emails |
-| Deep enrichment (Crawl4AI) | Phase 2 | Free — company websites, tech stack, team pages |
-| Company enrichment (Icypeas) | Phase 2 | Low-cost email/company data ($19/mo) |
-| Decision-Maker Leads | Phase 2 | Icypeas emails + Crawl4AI team page extraction |
-| CSV/CRM export | Phase 2 | SelectionBar buttons wired, backend pending |
-| Cost guardrails | Phase 2 | Credit caps, usage meters |
-| Captain Data upgrade | Phase 2 | Flip env var when first paying client (~£1k/mo) covers cost |
-| Auth/multi-user | Phase 2 | Provider choice TBD |
-| Saved searches | Phase 2 | |
-| Notes per job | Phase 2 | |
-| Analytics dashboard | Phase 2 | |
+| Auth/multi-user | Phase 3 | Provider choice TBD |
+| Direct outreach integration | Phase 3 | Lemlist, Instantly, or Smartlead |
+| CRM sync | Phase 3 | HubSpot, Pipedrive |
+| Auto-brand extraction | Phase 3 | Scrape client URL for logo + brand colors |
+| Saved searches | Phase 3 | |
+| Notes per job | Phase 3 | |
+| Analytics dashboard | Phase 3 | |
 
 ---
 
@@ -301,11 +310,11 @@ Icypeas (find email/company data) → Reoon (verify email) → Crawl4AI (deep co
 - Company scraping — 0.5 credits per company profile
 - Profile scraping — 1.5 credits per LinkedIn profile
 
-### Additional Features
-- CSV export — wire up existing SelectionBar buttons
-- Cost guardrails — credit caps, usage meters, pre-enrichment estimates
-- Decision-Maker Leads — Icypeas emails + Crawl4AI team page extraction
-- Auth/multi-user, saved searches, notes, analytics dashboard
+### Completed Phase 2 Features
+- CSV export — 27-column client-side download with enrichment fields
+- Cost guardrails — credit meter in header, pre-enrichment confirmation, monthly cap (env var), 50/80/95% thresholds
+- Decision-Maker Leads — Company Intel section + contacts with verified email badges in detail panel
+- Enrichment pipeline wired end-to-end: API route → Zustand store → React hook → UI badges
 
 ### Captain Data Upgrade (Revenue-Triggered)
 When first paying client (~£1k/mo) covers the cost, upgrade Icypeas → Captain Data (~$399/mo):
