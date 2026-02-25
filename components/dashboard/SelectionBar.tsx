@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion';
 import { useSelectionStore } from '@/stores/useSelectionStore';
 import { useEnrichmentStore } from '@/stores/useEnrichmentStore';
+import { downloadCsv } from '@/lib/utils/csv-export';
 import type { Job } from '@/types';
 
 interface SelectionBarProps {
@@ -22,9 +23,14 @@ export function SelectionBar({ totalCount, allJobIds, jobs, onEnrich }: Selectio
 
   if (count === 0) return null;
 
+  const selectedJobs = jobs.filter((j) => selectedIds.has(j.id));
+
   const handleEnrich = () => {
-    const selectedJobs = jobs.filter((j) => selectedIds.has(j.id));
     onEnrich(selectedJobs);
+  };
+
+  const handleExport = () => {
+    downloadCsv(selectedJobs);
   };
 
   const enrichLabel = isEnriching && progress
@@ -73,8 +79,11 @@ export function SelectionBar({ totalCount, allJobIds, jobs, onEnrich }: Selectio
         )}
         {enrichLabel}
       </button>
-      <button className="btn-ghost text-sm px-3 py-1.5">
-        Export
+      <button
+        className="btn-ghost text-sm px-3 py-1.5"
+        onClick={handleExport}
+      >
+        Export CSV
       </button>
     </motion.div>
   );

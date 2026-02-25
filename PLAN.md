@@ -1,6 +1,6 @@
 # Phase 2: Enrichment Pipeline Implementation Plan
 
-**Overall Progress:** `67%`
+**Overall Progress:** `78%`
 
 ## TLDR
 Add enrichment to the job intelligence platform using a pipeline of free and low-cost providers: Crawl4AI (free) for deep company website crawling, Icypeas ($19/mo) for B2B email/company data, and Reoon (free lifetime deal) for email verification. Captain Data upgrade comes later when first paying client (~£1k/mo) covers the cost. CSV export and cost guardrails round out the phase.
@@ -63,11 +63,11 @@ Add enrichment to the job intelligence platform using a pipeline of free and low
   - [x] 🟩 Merged enrichment results into job data in `app/page.tsx`
   - [x] 🟩 Commit and push
 
-- [ ] 🟥 **Step 7: CSV export backend**
-  - [ ] 🟥 Wire "Export Selected" button to generate CSV from selected (enriched) jobs
-  - [ ] 🟥 Include enrichment fields in export (email, company data, verification status)
-  - [ ] 🟥 Browser download trigger
-  - [ ] 🟥 Commit and push
+- [x] 🟩 **Step 7: CSV export**
+  - [x] 🟩 Created `lib/utils/csv-export.ts` — CSV generation with 27 columns (job + enrichment fields)
+  - [x] 🟩 Wired "Export CSV" button in SelectionBar — client-side download, no API needed
+  - [x] 🟩 Includes enrichment fields: industry, website, employees, technologies, decision makers, etc.
+  - [x] 🟩 Commit and push
 
 - [ ] 🟥 **Step 8: Cost guardrails**
   - [ ] 🟥 Credit usage tracking store (Zustand) — track Icypeas credits consumed per session/month
