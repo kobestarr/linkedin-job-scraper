@@ -1,6 +1,6 @@
 # Phase 2: Enrichment Pipeline Implementation Plan
 
-**Overall Progress:** `56%`
+**Overall Progress:** `67%`
 
 ## TLDR
 Add enrichment to the job intelligence platform using a pipeline of free and low-cost providers: Crawl4AI (free) for deep company website crawling, Icypeas ($19/mo) for B2B email/company data, and Reoon (free lifetime deal) for email verification. Captain Data upgrade comes later when first paying client (~£1k/mo) covers the cost. CSV export and cost guardrails round out the phase.
@@ -54,12 +54,14 @@ Add enrichment to the job intelligence platform using a pipeline of free and low
   - [x] 🟩 `ICYPEAS_API_KEY` already in `.env.example`
   - [x] 🟩 Commit and push
 
-- [ ] 🟥 **Step 6: Wire enrichment pipeline end-to-end**
-  - [ ] 🟥 Enrichment flow: Icypeas (find email) → Reoon (verify) → Crawl4AI (deep data) → store enriched job
-  - [ ] 🟥 Connect "Enrich Selected" button in SelectionBar to pipeline
-  - [ ] 🟥 Add enrichment status indicators to job cards (enriched/pending/failed)
-  - [ ] 🟥 Store enrichment results (extend localStorage provider or add caching)
-  - [ ] 🟥 Commit and push
+- [x] 🟩 **Step 6: Wire enrichment pipeline end-to-end**
+  - [x] 🟩 Created `app/api/jobs/enrich/route.ts` — POST handler using provider factory
+  - [x] 🟩 Created `stores/useEnrichmentStore.ts` — Zustand store with progress tracking
+  - [x] 🟩 Created `hooks/useEnrichment.ts` — React hook with AbortController cancellation
+  - [x] 🟩 Wired SelectionBar "Enrich Selected" button with spinner + progress
+  - [x] 🟩 Added enrichment badges to JobCard + JobCardRich (Enriching/Enriched)
+  - [x] 🟩 Merged enrichment results into job data in `app/page.tsx`
+  - [x] 🟩 Commit and push
 
 - [ ] 🟥 **Step 7: CSV export backend**
   - [ ] 🟥 Wire "Export Selected" button to generate CSV from selected (enriched) jobs

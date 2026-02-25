@@ -20,7 +20,9 @@ import { EmploymentTypeFilter } from '@/components/filters/EmploymentTypeFilter'
 import { PayFilter } from '@/components/filters/PayFilter';
 import { ActiveFilters } from '@/components/filters/ActiveFilters';
 import { useJobSearch } from '@/hooks/useJobSearch';
+import { useEnrichment } from '@/hooks/useEnrichment';
 import { useFilterStore } from '@/stores/useFilterStore';
+import { useEnrichmentStore } from '@/stores/useEnrichmentStore';
 import { getClientConfig } from '@/lib/config/client';
 
 /**
@@ -45,6 +47,15 @@ export default function DashboardPage() {
   const { jobs, isLoading, isRefreshing, isError, error, search, lastSearch, reset, streamProgress } =
     useJobSearch();
 
+  const { enrich } = useEnrichment();
+  const enrichmentResults = useEnrichmentStore((s) => s.enrichmentResults);
+
+  // Merge enrichment data into jobs so cards/detail panel see enriched fields
+  const mergedJobs = jobs.map((j) => {
+    const enriched = enrichmentResults.get(j.id);
+    return enriched ? { ...j, ...enriched } : j;
+  });
+
   const handleSearch = () => {
     if (!searchQuery.trim()) return;
     search(searchQuery, {
@@ -57,11 +68,11 @@ export default function DashboardPage() {
     });
   };
 
-  const selectedJob = jobs.find((j) => j.id === selectedJobId) || null;
+  const selectedJob = mergedJobs.find((j) => j.id === selectedJobId) || null;
   const hasSearched = lastSearch !== null;
-  const isStreaming = isLoading && jobs.length > 0;
-  const showEmptyState = !isLoading && !isError && jobs.length === 0;
-  const showResults = jobs.length > 0;
+  const isStreaming = isLoading && mergedJobs.length > 0;
+  const showEmptyState = !isLoading && !isError && mergedJobs.length === 0;
+  const showResults = mergedJobs.length > 0;
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -118,7 +129,7 @@ export default function DashboardPage() {
             {/* Results header */}
             {(hasSearched || isLoading) && (
               <SearchResultsHeader
-                count={jobs.length}
+                count={mergedJobs.length}
                 searchQuery={lastSearch?.query || ''}
                 lastUpdated={lastSearch?.timestamp}
                 isLoading={isLoading}
@@ -142,7 +153,7 @@ export default function DashboardPage() {
               <div className="flex items-center gap-3 px-4 py-2.5 glass-subtle">
                 <div className="w-2 h-2 rounded-full bg-primary-400 animate-pulse" />
                 <span className="text-sm text-white/60">
-                  {streamProgress?.found ?? jobs.length} jobs found — still scanning...
+                  {streamProgress?.found ?? mergedJobs.length} jobs found — still scanning...
                 </span>
                 <div className="flex-1 h-0.5 bg-white/[0.06] rounded-full overflow-hidden">
                   <div
@@ -185,7 +196,7 @@ export default function DashboardPage() {
             {/* Results — show as soon as jobs start arriving */}
             {showResults && (
               <JobList
-                jobs={jobs}
+                jobs={mergedJobs}
                 isLoading={false}
                 viewMode={viewMode}
                 selectedJobId={selectedJobId}
@@ -207,7 +218,7 @@ export default function DashboardPage() {
       </AnimatePresence>
 
       {/* Selection Bar */}
-      <SelectionBar totalCount={jobs.length} allJobIds={jobs.map((j) => j.id)} />
+      <SelectionBar totalCount={mergedJobs.length} allJobIds={mergedJobs.map((j) => j.id)} jobs={mergedJobs} onEnrich={enrich} />
 
       {/* Footer */}
       <footer className="py-3 sm:py-4 text-center">

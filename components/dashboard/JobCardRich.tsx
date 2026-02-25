@@ -5,6 +5,7 @@ import { useState, useMemo } from 'react';
 import { cn, formatRelativeTime } from '@/lib/utils';
 import { getCompanyLogoUrl } from '@/lib/utils/company-logo';
 import { computePowerScore, getDescriptionPreview } from '@/lib/utils/power-leads';
+import { useEnrichmentStore } from '@/stores/useEnrichmentStore';
 import type { Job } from '@/types';
 
 interface JobCardRichProps {
@@ -22,6 +23,9 @@ export function JobCardRich({ job, index = 0, onSelect, isSelected, isChecked, o
   const showLogo = logoUrl && !logoError;
   const power = useMemo(() => computePowerScore(job), [job]);
   const descriptionPreview = useMemo(() => getDescriptionPreview(job.description), [job.description]);
+  const enrichingIds = useEnrichmentStore((s) => s.enrichingIds);
+  const isEnriching = enrichingIds.has(job.id);
+  const isEnriched = job.enriched === true && job.companyData != null;
 
   const handleClick = () => {
     if (onSelect) {
@@ -117,6 +121,18 @@ export function JobCardRich({ job, index = 0, onSelect, isSelected, isChecked, o
             <span className="badge-strong-lead">
               <BoltIcon className="w-3 h-3" />
               Strong
+            </span>
+          )}
+          {isEnriching && (
+            <span className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-300 border border-yellow-500/30">
+              <span className="w-1.5 h-1.5 rounded-full bg-yellow-400 animate-pulse" />
+              Enriching
+            </span>
+          )}
+          {isEnriched && !isEnriching && (
+            <span className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+              <CheckIcon className="w-2.5 h-2.5" />
+              Enriched
             </span>
           )}
         </div>

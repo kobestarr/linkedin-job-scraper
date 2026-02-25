@@ -2,19 +2,34 @@
 
 import { motion } from 'framer-motion';
 import { useSelectionStore } from '@/stores/useSelectionStore';
+import { useEnrichmentStore } from '@/stores/useEnrichmentStore';
+import type { Job } from '@/types';
 
 interface SelectionBarProps {
   totalCount: number;
   allJobIds: string[];
+  jobs: Job[];
+  onEnrich: (jobs: Job[]) => void;
 }
 
-export function SelectionBar({ totalCount, allJobIds }: SelectionBarProps) {
+export function SelectionBar({ totalCount, allJobIds, jobs, onEnrich }: SelectionBarProps) {
   const selectedIds = useSelectionStore((s) => s.selectedIds);
   const selectAll = useSelectionStore((s) => s.selectAll);
   const deselectAll = useSelectionStore((s) => s.deselectAll);
+  const isEnriching = useEnrichmentStore((s) => s.isEnriching);
+  const progress = useEnrichmentStore((s) => s.progress);
   const count = selectedIds.size;
 
   if (count === 0) return null;
+
+  const handleEnrich = () => {
+    const selectedJobs = jobs.filter((j) => selectedIds.has(j.id));
+    onEnrich(selectedJobs);
+  };
+
+  const enrichLabel = isEnriching && progress
+    ? `Enriching ${progress.completed}/${progress.total}...`
+    : 'Enrich Selected';
 
   return (
     <motion.div
@@ -48,8 +63,15 @@ export function SelectionBar({ totalCount, allJobIds }: SelectionBarProps) {
 
       <div className="w-px h-5 bg-white/10" />
 
-      <button className="btn-primary text-sm py-2 px-4">
-        Enrich Selected
+      <button
+        className="btn-primary text-sm py-2 px-4 disabled:opacity-50"
+        onClick={handleEnrich}
+        disabled={isEnriching}
+      >
+        {isEnriching && (
+          <span className="inline-block w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
+        )}
+        {enrichLabel}
       </button>
       <button className="btn-ghost text-sm px-3 py-1.5">
         Export
