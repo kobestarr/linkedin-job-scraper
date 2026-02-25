@@ -1,6 +1,6 @@
 # Phase 2: Enrichment Pipeline Implementation Plan
 
-**Overall Progress:** `89%`
+**Overall Progress:** `100%`
 
 ## TLDR
 Add enrichment to the job intelligence platform using a pipeline of free and low-cost providers: Crawl4AI (free) for deep company website crawling, Icypeas ($19/mo) for B2B email/company data, and Reoon (free lifetime deal) for email verification. Captain Data upgrade comes later when first paying client (~£1k/mo) covers the cost. CSV export and cost guardrails round out the phase.
@@ -81,7 +81,8 @@ Add enrichment to the job intelligence platform using a pipeline of free and low
   - [x] 🟩 `NEXT_PUBLIC_MONTHLY_CREDIT_CAP` env var (default: 500)
   - [x] 🟩 Commit and push
 
-- [ ] 🟥 **Step 9: Decision-Maker Leads display**
-  - [ ] 🟥 Add decision-maker contacts to job detail panel (from Icypeas profile data + Crawl4AI team pages)
-  - [ ] 🟥 Show verified email badge (Reoon status)
-  - [ ] 🟥 Commit and push
+- [x] 🟩 **Step 9: Decision-Maker Leads display**
+  - [x] 🟩 Added Company Intel section to JobDetailPanel (industry, HQ, employees, tech stack, specialties, website)
+  - [x] 🟩 Added Decision Makers section with avatar, title, email, phone, LinkedIn link
+  - [x] 🟩 Green "Verified" badge on emails (Reoon verification status)
+  - [x] 🟩 Commit and push
