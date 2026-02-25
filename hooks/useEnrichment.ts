@@ -25,6 +25,9 @@ export function useEnrichment(): UseEnrichmentReturn {
   const startEnrichment = useEnrichmentStore((s) => s.startEnrichment);
   const addResults = useEnrichmentStore((s) => s.addResults);
   const finishEnrichment = useEnrichmentStore((s) => s.finishEnrichment);
+  const addCreditsUsed = useEnrichmentStore((s) => s.addCreditsUsed);
+  const setCreditBalance = useEnrichmentStore((s) => s.setCreditBalance);
+  const creditBalance = useEnrichmentStore((s) => s.creditBalance);
 
   const abortRef = useRef<AbortController | null>(null);
 
@@ -68,6 +71,20 @@ export function useEnrichment(): UseEnrichmentReturn {
         const results: EnrichedJob[] = data.results || [];
 
         addResults(results);
+
+        // Track credits consumed
+        if (data.creditsUsed && data.creditsUsed > 0) {
+          addCreditsUsed(data.creditsUsed);
+        }
+
+        // Update balance from server response
+        if (data.creditsRemaining != null && creditBalance) {
+          setCreditBalance({
+            ...creditBalance,
+            remaining: data.creditsRemaining,
+          });
+        }
+
         finishEnrichment();
       } catch (err) {
         if (err instanceof Error && err.name === 'AbortError') {
@@ -82,7 +99,7 @@ export function useEnrichment(): UseEnrichmentReturn {
         }
       }
     },
-    [startEnrichment, addResults, finishEnrichment]
+    [startEnrichment, addResults, finishEnrichment, addCreditsUsed, setCreditBalance, creditBalance]
   );
 
   return { enrich, isEnriching, progress, error, cancel };

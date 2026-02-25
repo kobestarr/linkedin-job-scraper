@@ -2,6 +2,7 @@
 
 import Image from 'next/image';
 import { useState } from 'react';
+import { CreditMeter } from '@/components/dashboard/CreditMeter';
 
 interface LogoHeaderProps {
   logoUrl?: string;
@@ -45,6 +46,10 @@ export function LogoHeader({
         </span>
       </div>
 
+      <div className="flex items-center gap-3">
+        {/* Credit usage meter */}
+        <CreditMeter />
+
       {/* Settings button */}
       {showSettings && (
         <button
@@ -68,6 +73,7 @@ export function LogoHeader({
           <span className="hidden sm:inline">Settings</span>
         </button>
       )}
+      </div>
     </header>
   );
 }

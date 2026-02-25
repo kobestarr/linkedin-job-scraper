@@ -1,9 +1,11 @@
 'use client';
 
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useSelectionStore } from '@/stores/useSelectionStore';
 import { useEnrichmentStore } from '@/stores/useEnrichmentStore';
 import { downloadCsv } from '@/lib/utils/csv-export';
+import { estimateCredits, getUsageLevel, getMonthlyCreditCap } from '@/lib/config/usage-limits';
 import type { Job } from '@/types';
 
 interface SelectionBarProps {
@@ -19,13 +21,28 @@ export function SelectionBar({ totalCount, allJobIds, jobs, onEnrich }: Selectio
   const deselectAll = useSelectionStore((s) => s.deselectAll);
   const isEnriching = useEnrichmentStore((s) => s.isEnriching);
   const progress = useEnrichmentStore((s) => s.progress);
+  const creditBalance = useEnrichmentStore((s) => s.creditBalance);
+  const sessionCreditsUsed = useEnrichmentStore((s) => s.sessionCreditsUsed);
   const count = selectedIds.size;
+
+  const [showConfirm, setShowConfirm] = useState(false);
 
   if (count === 0) return null;
 
   const selectedJobs = jobs.filter((j) => selectedIds.has(j.id));
+  const providerId = creditBalance?.provider ?? 'none';
+  const estimated = estimateCredits(selectedJobs.length, providerId);
+  const cap = getMonthlyCreditCap();
+  const usageLevel = getUsageLevel(sessionCreditsUsed + estimated, cap);
+  const insufficientCredits = creditBalance != null && estimated > 0 && creditBalance.remaining < estimated;
 
   const handleEnrich = () => {
+    // Show confirmation if there's a cost
+    if (estimated > 0 && !showConfirm) {
+      setShowConfirm(true);
+      return;
+    }
+    setShowConfirm(false);
     onEnrich(selectedJobs);
   };
 
@@ -69,16 +86,40 @@ export function SelectionBar({ totalCount, allJobIds, jobs, onEnrich }: Selectio
 
       <div className="w-px h-5 bg-white/10" />
 
-      <button
-        className="btn-primary text-sm py-2 px-4 disabled:opacity-50"
-        onClick={handleEnrich}
-        disabled={isEnriching}
-      >
-        {isEnriching && (
-          <span className="inline-block w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
-        )}
-        {enrichLabel}
-      </button>
+      {/* Enrichment confirmation */}
+      {showConfirm && !isEnriching ? (
+        <div className="flex items-center gap-2">
+          <span className={`text-xs ${usageLevel === 'critical' ? 'text-red-400' : usageLevel === 'high' ? 'text-orange-400' : 'text-white/60'}`}>
+            ~{estimated} credits
+            {insufficientCredits && ' (insufficient!)'}
+          </span>
+          <button
+            className="btn-primary text-xs py-1.5 px-3 disabled:opacity-50"
+            onClick={handleEnrich}
+            disabled={insufficientCredits}
+          >
+            Confirm
+          </button>
+          <button
+            className="btn-ghost text-xs py-1.5 px-2"
+            onClick={() => setShowConfirm(false)}
+          >
+            Cancel
+          </button>
+        </div>
+      ) : (
+        <button
+          className="btn-primary text-sm py-2 px-4 disabled:opacity-50"
+          onClick={handleEnrich}
+          disabled={isEnriching || (usageLevel === 'critical' && estimated > 0)}
+        >
+          {isEnriching && (
+            <span className="inline-block w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
+          )}
+          {enrichLabel}
+        </button>
+      )}
+
       <button
         className="btn-ghost text-sm px-3 py-1.5"
         onClick={handleExport}

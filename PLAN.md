@@ -1,6 +1,6 @@
 # Phase 2: Enrichment Pipeline Implementation Plan
 
-**Overall Progress:** `78%`
+**Overall Progress:** `89%`
 
 ## TLDR
 Add enrichment to the job intelligence platform using a pipeline of free and low-cost providers: Crawl4AI (free) for deep company website crawling, Icypeas ($19/mo) for B2B email/company data, and Reoon (free lifetime deal) for email verification. Captain Data upgrade comes later when first paying client (~£1k/mo) covers the cost. CSV export and cost guardrails round out the phase.
@@ -69,12 +69,17 @@ Add enrichment to the job intelligence platform using a pipeline of free and low
   - [x] 🟩 Includes enrichment fields: industry, website, employees, technologies, decision makers, etc.
   - [x] 🟩 Commit and push
 
-- [ ] 🟥 **Step 8: Cost guardrails**
-  - [ ] 🟥 Credit usage tracking store (Zustand) — track Icypeas credits consumed per session/month
-  - [ ] 🟥 Pre-enrichment credit estimate (show cost before user confirms)
-  - [ ] 🟥 Monthly cap with warning at 50/80/95% thresholds
-  - [ ] 🟥 UI: usage meter in header or settings
-  - [ ] 🟥 Commit and push
+- [x] 🟩 **Step 8: Cost guardrails**
+  - [x] 🟩 Created `lib/config/usage-limits.ts` — credit costs per provider, monthly cap, threshold levels
+  - [x] 🟩 Extended enrichment store with `sessionCreditsUsed`, `creditBalance`, `addCreditsUsed()`
+  - [x] 🟩 Created `app/api/credits/route.ts` — GET endpoint for provider credit balance
+  - [x] 🟩 Created `hooks/useCreditBalance.ts` — fetch balance on mount
+  - [x] 🟩 Created `components/dashboard/CreditMeter.tsx` — color-coded bar in header (ok/warning/high/critical)
+  - [x] 🟩 Pre-enrichment confirmation with cost estimate in SelectionBar
+  - [x] 🟩 Pre-flight credit check in API route (402 if insufficient)
+  - [x] 🟩 Enrichment blocked at critical threshold (95%+ of monthly cap)
+  - [x] 🟩 `NEXT_PUBLIC_MONTHLY_CREDIT_CAP` env var (default: 500)
+  - [x] 🟩 Commit and push
 
 - [ ] 🟥 **Step 9: Decision-Maker Leads display**
   - [ ] 🟥 Add decision-maker contacts to job detail panel (from Icypeas profile data + Crawl4AI team pages)

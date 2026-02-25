@@ -9,6 +9,12 @@ interface EnrichmentProgress {
   failed: number;
 }
 
+interface CreditBalance {
+  remaining: number;
+  total: number;
+  provider: string;
+}
+
 interface EnrichmentState {
   /** Job IDs currently being enriched */
   enrichingIds: Set<string>;
@@ -25,6 +31,15 @@ interface EnrichmentState {
   /** Last error message */
   error: string | null;
 
+  /** Credits consumed this session */
+  sessionCreditsUsed: number;
+
+  /** Current credit balance from provider */
+  creditBalance: CreditBalance | null;
+
+  /** Whether balance is being fetched */
+  isLoadingBalance: boolean;
+
   /** Mark jobs as currently enriching */
   startEnrichment: (ids: string[]) => void;
 
@@ -39,14 +54,26 @@ interface EnrichmentState {
 
   /** Clear all enrichment state */
   clearResults: () => void;
+
+  /** Track credits consumed */
+  addCreditsUsed: (amount: number) => void;
+
+  /** Update credit balance from provider */
+  setCreditBalance: (balance: CreditBalance | null) => void;
+
+  /** Set balance loading state */
+  setLoadingBalance: (loading: boolean) => void;
 }
 
-export const useEnrichmentStore = create<EnrichmentState>()((set, get) => ({
+export const useEnrichmentStore = create<EnrichmentState>()((set) => ({
   enrichingIds: new Set<string>(),
   enrichmentResults: new Map<string, EnrichedJob>(),
   isEnriching: false,
   progress: null,
   error: null,
+  sessionCreditsUsed: 0,
+  creditBalance: null,
+  isLoadingBalance: false,
 
   startEnrichment: (ids) =>
     set({
@@ -118,4 +145,18 @@ export const useEnrichmentStore = create<EnrichmentState>()((set, get) => ({
       progress: null,
       error: null,
     }),
+
+  addCreditsUsed: (amount) =>
+    set((state) => ({
+      sessionCreditsUsed: state.sessionCreditsUsed + amount,
+      creditBalance: state.creditBalance
+        ? { ...state.creditBalance, remaining: state.creditBalance.remaining - amount }
+        : null,
+    })),
+
+  setCreditBalance: (balance) =>
+    set({ creditBalance: balance }),
+
+  setLoadingBalance: (loading) =>
+    set({ isLoadingBalance: loading }),
 }));
